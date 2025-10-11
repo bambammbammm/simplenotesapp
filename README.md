@@ -140,6 +140,20 @@ Read documentation 60m --p
 4. Drag all three onto each other
 5. Top card shows: `135m` in white
 
+## Planned Features
+
+### Active Card Selection
+- **Select/Track Cards**: Mark specific cards as "active" to track them
+- **Custom Ordering**: Arrange active cards in a specific sequence
+- **Filtered Time Display**: Show time totals only for selected cards
+- **Tag Planning**: Assign dates or tags to active cards for scheduling
+
+### Pomodoro Timer
+- **Integrated Timer**: Built-in Pomodoro timer for time-boxed work
+- **Card Integration**: Link timer to specific cards
+- **Session Tracking**: Track completed Pomodoro sessions per card
+- **Break Reminders**: Automatic short and long break notifications
+
 ## License
 
 MIT License - Feel free to use and modify as needed.

@@ -270,7 +270,47 @@ toggleComplete(id) {
 
 ## Erweiterungsmöglichkeiten
 
-### Mögliche Features
+### Geplante Features (Priorität)
+
+#### 1. Aktive Karten-Auswahl
+Karten können als "aktiv" markiert werden für gezieltes Tracking:
+- **Selektion**: Checkbox oder Toggle zum Aktivieren
+- **Benutzerdefinierte Reihenfolge**: Drag & Drop für aktive Karten
+- **Gefilterte Zeit-Anzeige**: Header zeigt nur Zeit der aktiven Karten
+- **Tag-Planung**: Datum/Deadline für aktive Karten setzen
+- **Fokus-Modus**: Nur aktive Karten anzeigen
+
+Implementierung:
+```javascript
+note.active = false  // Neues Property
+note.activeOrder = null  // Position in Aktiv-Liste
+note.deadline = null  // Optional: ISO-Datum
+```
+
+#### 2. Pomodoro-Timer
+Integrierter Timer für fokussiertes Arbeiten:
+- **25/5 Minuten**: Standard Pomodoro (25 min Arbeit, 5 min Pause)
+- **Karten-Integration**: Timer an Karte koppeln
+- **Session-Tracking**: Anzahl abgeschlossener Pomodoros pro Karte
+- **Automatische Pausen**: Short Break (5 min), Long Break (15 min nach 4 Sessions)
+- **Browser-Notifications**: Sounds + Desktop-Benachrichtigung
+- **Zeit-Logging**: Tatsächliche Zeit vs. geschätzte Zeit
+
+Implementierung:
+```javascript
+note.pomodorosCompleted = 0
+note.actualTimeSpent = 0  // in Minuten
+
+// Timer-State (global)
+this.timer = {
+    running: false,
+    remainingSeconds: 0,
+    currentNoteId: null,
+    type: 'work' | 'shortBreak' | 'longBreak'
+}
+```
+
+### Weitere Mögliche Features
 1. **Export/Import** - JSON-Export für Backup
 2. **Suche** - Filter nach Content/Kategorie
 3. **Sortierung** - Nach Zeit, Kategorie, Erstelldatum
