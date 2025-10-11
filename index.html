@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Notes App</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-left">
+                <div class="time-stats" id="timeStats"></div>
+            </div>
+            <div class="header-right">
+                <span class="note-count">0 notes</span>
+            </div>
+        </header>
+
+        <!-- Notes Canvas -->
+        <main class="notes-canvas" id="notesCanvas">
+            <div class="welcome-message" id="welcomeMessage">
+                <h2>Willkommen bei Simple Notes</h2>
+                <p>Geben Sie unten eine Notiz ein, um zu beginnen...</p>
+            </div>
+        </main>
+
+        <!-- Input Area -->
+        <div class="input-container">
+            <div class="input-wrapper">
+                <span class="input-prompt">&gt;</span>
+                <input
+                    type="text"
+                    id="noteInput"
+                    class="note-input"
+                    placeholder="Neue Notiz oder Todo eingeben..."
+                    autofocus
+                />
+            </div>
+            <div class="input-hint">
+                <span>Enter zum Speichern • ESC zum Löschen</span>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
