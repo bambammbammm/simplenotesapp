@@ -292,6 +292,17 @@ body {
     opacity: 0.3;
 }
 
+.stack-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #aaa;
+    padding: 8px 0;
+    margin-top: 8px;
+    border-top: 1px solid #2a2a2a;
+    text-align: center;
+    letter-spacing: 0.5px;
+}
+
 .note-content {
     flex: 1;
     font-size: 14px;
@@ -484,9 +495,17 @@ body {
 .stack-modal-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     padding: 20px 24px;
     border-bottom: 1px solid #333;
+    gap: 16px;
+}
+
+.stack-modal-title-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
 .stack-modal-header h3 {
@@ -494,6 +513,27 @@ body {
     font-size: 18px;
     font-weight: 500;
     color: #e0e0e0;
+}
+
+.stack-title-input {
+    width: 100%;
+    background-color: #0f0f0f;
+    border: 1px solid #333;
+    border-radius: 4px;
+    color: #e0e0e0;
+    font-size: 14px;
+    font-family: inherit;
+    padding: 8px 12px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.stack-title-input:focus {
+    border-color: #555;
+}
+
+.stack-title-input::placeholder {
+    color: #555;
 }
 
 .stack-modal-close {

@@ -10,6 +10,7 @@ class NotesApp {
         this.stackModal = document.getElementById('stackModal');
         this.stackModalBody = document.getElementById('stackModalBody');
         this.stackModalClose = document.getElementById('stackModalClose');
+        this.stackTitleInput = document.getElementById('stackTitleInput');
         this.draggedCard = null;
         this.currentStackId = null;
 
@@ -274,6 +275,23 @@ class NotesApp {
         const stack = this.stacks.find(s => s.id === stackId);
         if (!stack) return;
 
+        // Set stack title in input
+        this.stackTitleInput.value = stack.title || '';
+
+        // Remove previous event listener if any
+        if (this.stackTitleInput._changeHandler) {
+            this.stackTitleInput.removeEventListener('input', this.stackTitleInput._changeHandler);
+        }
+
+        // Add event listener to save title on change
+        const changeHandler = () => {
+            stack.title = this.stackTitleInput.value.trim();
+            this.saveStacks();
+            this.render(); // Update main view to show title on top card
+        };
+        this.stackTitleInput.addEventListener('input', changeHandler);
+        this.stackTitleInput._changeHandler = changeHandler;
+
         // Get notes in stack
         const stackNotes = stack.noteIds
             .map(id => this.notes.find(n => n.id === id))
@@ -325,6 +343,7 @@ class NotesApp {
         const stack = {
             id: stackId,
             noteIds: noteIds,
+            title: '',
         };
         this.stacks.push(stack);
 
@@ -535,14 +554,20 @@ class NotesApp {
         // Display notes with last added on top
         stackNotes.forEach((note, index) => {
             const isTopCard = index === stackNotes.length - 1;
-            const noteCard = this.createNoteCard(note, index, stackNotes.length, isTopCard ? totalTime : null);
+            const noteCard = this.createNoteCard(
+                note,
+                index,
+                stackNotes.length,
+                isTopCard ? totalTime : null,
+                isTopCard ? stack.title : null
+            );
             container.appendChild(noteCard);
         });
 
         return container;
     }
 
-    createNoteCard(note, stackIndex = null, totalInStack = 1, stackTotalTime = null) {
+    createNoteCard(note, stackIndex = null, totalInStack = 1, stackTotalTime = null, stackTitle = null) {
         const card = document.createElement('div');
         card.className = 'note-card';
         if (note.completed) {
@@ -587,9 +612,13 @@ class NotesApp {
         const timeDisplay = document.createElement('span');
         timeDisplay.className = 'note-time';
 
-        // If this is the top card of a stack, show total time
+        // If this is the top card of a stack, show individual + total time
         if (stackTotalTime !== null && stackTotalTime > 0) {
-            timeDisplay.textContent = `${stackTotalTime}m`;
+            if (note.timeMinutes) {
+                timeDisplay.textContent = `${note.timeMinutes}m (${stackTotalTime}m)`;
+            } else {
+                timeDisplay.textContent = `${stackTotalTime}m`;
+            }
             timeDisplay.classList.add('stack-total');
         } else if (note.timeMinutes) {
             timeDisplay.textContent = `${note.timeMinutes}m`;
@@ -623,6 +652,14 @@ class NotesApp {
 
         header.appendChild(leftActions);
         header.appendChild(rightActions);
+
+        // Add stack title if present (above content)
+        if (stackTitle && stackTitle.trim() !== '') {
+            const titleElement = document.createElement('div');
+            titleElement.className = 'stack-title';
+            titleElement.textContent = stackTitle;
+            card.appendChild(titleElement);
+        }
 
         const content = document.createElement('div');
         content.className = 'note-content';
