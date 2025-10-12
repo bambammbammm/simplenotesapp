@@ -8,21 +8,175 @@
 </head>
 <body>
     <div class="app-container">
+        <!-- Work Timer Sidebar -->
+        <aside class="work-sidebar" id="workSidebar" style="display: none;">
+            <div class="work-sidebar-content">
+                <h3 class="work-sidebar-title">Fokussierte Aufgaben</h3>
+
+                <div class="work-time-display">
+                    <div class="work-time-label">Gesamtzeit:</div>
+                    <div class="work-time-total" id="workTimeTotal">0m</div>
+                </div>
+
+                <div class="work-timer" id="workTimer" style="display: none;">
+                    <div class="timer-display" id="timerDisplay">00:00:00</div>
+                    <div class="timer-controls">
+                        <button class="timer-btn pause-btn" id="pauseBtn">‖ Pause</button>
+                        <button class="timer-btn stop-btn" id="stopBtn">□ Stop</button>
+                    </div>
+                </div>
+
+                <button class="start-work-btn" id="startWorkBtn">▸ Start Work</button>
+            </div>
+        </aside>
+
+        <div class="main-content">
         <!-- Header -->
         <header class="app-header">
-            <div class="header-left">
-                <div class="time-stats" id="timeStats"></div>
+            <div class="header-top">
+                <div class="header-left">
+                    <div class="time-stats" id="timeStats"></div>
+                </div>
+                <div class="header-center">
+                    <div class="backup-controls">
+                        <button class="backup-btn" id="selectBackupFolder" title="Backup-Ordner auswählen">
+                            ⊞ Ordner wählen
+                        </button>
+                        <button class="backup-btn" id="manualBackup" title="Backup jetzt erstellen" disabled>
+                            ⊡ Backup
+                        </button>
+                        <button class="backup-btn" id="importBackup" title="Backup wiederherstellen">
+                            ⊟ Import
+                        </button>
+                        <span class="backup-status" id="backupStatus">Kein Ordner gewählt</span>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <button class="view-switch-btn" id="viewSwitchBtn" title="Ansicht wechseln (Board ↔ Kanban)">
+                        <span class="view-icon">⊞</span>
+                        <span class="view-label">Kanban</span>
+                    </button>
+                    <span class="note-count">0 notes</span>
+                </div>
             </div>
-            <div class="header-right">
-                <span class="note-count">0 notes</span>
+            <div class="header-filters">
+                <div class="filter-section">
+                    <span class="filter-label">Kategorie:</span>
+                    <button class="filter-btn" data-filter="category-k" id="filterK">KSWIL</button>
+                    <button class="filter-btn" data-filter="category-h" id="filterH">HSLU</button>
+                    <button class="filter-btn" data-filter="category-p" id="filterP">Privat</button>
+                </div>
+                <div class="filter-section">
+                    <span class="filter-label">Zeit:</span>
+                    <button class="filter-btn" data-filter="time-0-15" id="filterTime15">≤15m</button>
+                    <button class="filter-btn" data-filter="time-16-30" id="filterTime30">16-30m</button>
+                    <button class="filter-btn" data-filter="time-31-60" id="filterTime60">31-60m</button>
+                    <button class="filter-btn" data-filter="time-60+" id="filterTime60Plus">60m+</button>
+                </div>
+                <div class="filter-section">
+                    <span class="filter-label">Tag:</span>
+                    <button class="filter-btn" data-filter="day-unassigned" id="filterDayUnassigned">Keine</button>
+                    <button class="filter-btn" data-filter="day-monday" id="filterDayMon">Mo</button>
+                    <button class="filter-btn" data-filter="day-tuesday" id="filterDayTue">Di</button>
+                    <button class="filter-btn" data-filter="day-wednesday" id="filterDayWed">Mi</button>
+                    <button class="filter-btn" data-filter="day-thursday" id="filterDayThu">Do</button>
+                    <button class="filter-btn" data-filter="day-friday" id="filterDayFri">Fr</button>
+                    <button class="filter-btn" data-filter="day-saturday" id="filterDaySat">Sa</button>
+                    <button class="filter-btn" data-filter="day-sunday" id="filterDaySun">So</button>
+                </div>
+                <button class="filter-clear-btn" id="clearFilters" style="display: none;">× Filter zurücksetzen</button>
             </div>
         </header>
 
-        <!-- Notes Canvas -->
+        <!-- Notes Canvas (Board View) -->
         <main class="notes-canvas" id="notesCanvas">
             <div class="welcome-message" id="welcomeMessage">
                 <h2>Willkommen bei Simple Notes</h2>
                 <p>Geben Sie unten eine Notiz ein, um zu beginnen...</p>
+            </div>
+        </main>
+
+        <!-- Kanban View -->
+        <main class="kanban-view" id="kanbanView" style="display: none;">
+            <div class="kanban-column" data-day="unassigned">
+                <div class="kanban-column-header">
+                    <div class="kanban-header-top">
+                        <h3>Nicht zugewiesen</h3>
+                        <span class="kanban-count">0</span>
+                    </div>
+                    <div class="kanban-time-total">0m</div>
+                </div>
+                <div class="kanban-column-body" data-day="unassigned"></div>
+            </div>
+            <div class="kanban-column" data-day="monday">
+                <div class="kanban-column-header">
+                    <div class="kanban-header-top">
+                        <h3>Montag</h3>
+                        <span class="kanban-count">0</span>
+                    </div>
+                    <div class="kanban-time-total">0m</div>
+                </div>
+                <div class="kanban-column-body" data-day="monday"></div>
+            </div>
+            <div class="kanban-column" data-day="tuesday">
+                <div class="kanban-column-header">
+                    <div class="kanban-header-top">
+                        <h3>Dienstag</h3>
+                        <span class="kanban-count">0</span>
+                    </div>
+                    <div class="kanban-time-total">0m</div>
+                </div>
+                <div class="kanban-column-body" data-day="tuesday"></div>
+            </div>
+            <div class="kanban-column" data-day="wednesday">
+                <div class="kanban-column-header">
+                    <div class="kanban-header-top">
+                        <h3>Mittwoch</h3>
+                        <span class="kanban-count">0</span>
+                    </div>
+                    <div class="kanban-time-total">0m</div>
+                </div>
+                <div class="kanban-column-body" data-day="wednesday"></div>
+            </div>
+            <div class="kanban-column" data-day="thursday">
+                <div class="kanban-column-header">
+                    <div class="kanban-header-top">
+                        <h3>Donnerstag</h3>
+                        <span class="kanban-count">0</span>
+                    </div>
+                    <div class="kanban-time-total">0m</div>
+                </div>
+                <div class="kanban-column-body" data-day="thursday"></div>
+            </div>
+            <div class="kanban-column" data-day="friday">
+                <div class="kanban-column-header">
+                    <div class="kanban-header-top">
+                        <h3>Freitag</h3>
+                        <span class="kanban-count">0</span>
+                    </div>
+                    <div class="kanban-time-total">0m</div>
+                </div>
+                <div class="kanban-column-body" data-day="friday"></div>
+            </div>
+            <div class="kanban-column" data-day="saturday">
+                <div class="kanban-column-header">
+                    <div class="kanban-header-top">
+                        <h3>Samstag</h3>
+                        <span class="kanban-count">0</span>
+                    </div>
+                    <div class="kanban-time-total">0m</div>
+                </div>
+                <div class="kanban-column-body" data-day="saturday"></div>
+            </div>
+            <div class="kanban-column" data-day="sunday">
+                <div class="kanban-column-header">
+                    <div class="kanban-header-top">
+                        <h3>Sonntag</h3>
+                        <span class="kanban-count">0</span>
+                    </div>
+                    <div class="kanban-time-total">0m</div>
+                </div>
+                <div class="kanban-column-body" data-day="sunday"></div>
             </div>
         </main>
 
@@ -42,6 +196,7 @@
                 <span>Enter zum Speichern • ESC zum Löschen</span>
             </div>
         </div>
+        </div>
     </div>
 
     <!-- Stack Modal -->
@@ -57,6 +212,13 @@
                         class="stack-title-input"
                         placeholder="Stack-Titel (optional)..."
                     />
+                    <div class="stack-type-toggle">
+                        <button class="stack-type-btn" id="stackTypeBtn" data-type="group">
+                            <span class="stack-type-icon">+</span>
+                            <span class="stack-type-label">Gruppe</span>
+                        </button>
+                        <span class="stack-type-hint">Klick zum Wechseln: Gruppe ↔ Sequenz</span>
+                    </div>
                 </div>
                 <button class="stack-modal-close" id="stackModalClose">&times;</button>
             </div>
