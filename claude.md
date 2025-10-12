@@ -199,7 +199,7 @@ Pastel-Farben für Kategorien:
 ```css
 --k: #7FDBDA  /* Türkis */
 --h: #FFB380  /* Orange */
---p: #C7B3E5  /* Violet */
+--p: #FF7B7B  /* Rot */
 ```
 
 Implementierung via CSS Custom Properties:

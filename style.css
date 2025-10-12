@@ -61,7 +61,7 @@ body {
 }
 
 .time-stat[data-category="p"] .time-stat-value {
-    color: #C7B3E5;
+    color: #FF7B7B;
 }
 
 .note-count {
@@ -130,7 +130,7 @@ body {
 }
 
 .note-card[data-category="p"] {
-    --card-color: #C7B3E5;
+    --card-color: #FF7B7B;
 }
 
 @keyframes fadeIn {

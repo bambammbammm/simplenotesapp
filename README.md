@@ -16,7 +16,7 @@ A minimalist, terminal-inspired notes and todo management application with advan
 Tag your notes with color categories:
 - `--k` → Turquoise border (e.g., critical tasks)
 - `--h` → Orange border (e.g., high priority)
-- `--p` → Violet border (e.g., projects)
+- `--p` → Red border (e.g., projects)
 
 **Example:** `Meeting preparation --k`
 

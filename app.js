@@ -487,15 +487,15 @@ class NotesApp {
         let html = '';
 
         if (stats.k > 0) {
-            html += `<div class="time-stat" data-category="k"><span class="time-stat-label">k:</span><span class="time-stat-value">${stats.k}m</span></div>`;
+            html += `<div class="time-stat" data-category="k"><span class="time-stat-label">KSWIL:</span><span class="time-stat-value">${stats.k}m</span></div>`;
         }
 
         if (stats.h > 0) {
-            html += `<div class="time-stat" data-category="h"><span class="time-stat-label">h:</span><span class="time-stat-value">${stats.h}m</span></div>`;
+            html += `<div class="time-stat" data-category="h"><span class="time-stat-label">HSLU:</span><span class="time-stat-value">${stats.h}m</span></div>`;
         }
 
         if (stats.p > 0) {
-            html += `<div class="time-stat" data-category="p"><span class="time-stat-label">p:</span><span class="time-stat-value">${stats.p}m</span></div>`;
+            html += `<div class="time-stat" data-category="p"><span class="time-stat-label">Privat:</span><span class="time-stat-value">${stats.p}m</span></div>`;
         }
 
         if (stats.none > 0) {
