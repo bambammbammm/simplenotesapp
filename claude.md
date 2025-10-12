@@ -47,7 +47,77 @@ simplenotesapp/
 
 ## Haupt-Features
 
-### 1. Eingabe-Parsing
+### 1. Karten bearbeiten (NEU)
+Bestehende Karten können bearbeitet werden:
+
+**UI**:
+- Dreipunkte-Button (⋮) öffnet Edit-Modus
+- Content wird contenteditable
+- Enter speichert, ESC bricht ab
+
+**Implementierung** (app.js:126-271):
+```javascript
+enterEditMode(id) {
+    // Speichert Original-Werte (_originalContent, _originalCategory, _originalTime)
+    // Zeigt Content + Zeit + Kategorie im editierbaren Format
+    // Keyboard: Enter → saveEdit(), ESC → cancelEdit()
+}
+
+saveEdit(id) {
+    // Nutzt gleiche Parsing-Logik wie addNote()
+    // Extrahiert Kategorie (--k/h/p) und Zeit (\d+m)
+    // Updated note-Object und speichert
+}
+```
+
+**Wichtig**: Die Parsing-Reihenfolge (erst Kategorie, dann Zeit) ist identisch zu `addNote()`.
+
+### 2. Stack Modal (NEU)
+Klick auf Stack öffnet Modal zur Verwaltung:
+
+**Features**:
+- Badge zeigt Anzahl Karten (z.B. "3 cards")
+- Modal listet alle Karten vertikal auf
+- **Reordering**: ↑↓ Buttons verschieben Karten (kein Drag & Drop mehr)
+- **Unstack**: ⇢ Button entfernt Karte aus Stack
+- Alle Actions funktionieren: Edit (⋮), Delete (×), Complete (○)
+
+**Implementierung** (app.js:273-300, 468-499, 638-952):
+```javascript
+openStackModal(stackId) {
+    // Lädt Stack, rendert Karten mit createModalCard()
+    // Übergibt isFirst/isLast für disabled State der Pfeile
+}
+
+createModalCard(note, isFirst, isLast) {
+    // Separater Render für Modal-Karten
+    // Fügt ↑↓ Buttons hinzu (disabled wenn erste/letzte)
+    // Fügt ⇢ Unstack-Button hinzu
+}
+
+moveCardUp(noteId) / moveCardDown(noteId) {
+    // Swapped Position im stack.noteIds Array
+    // Speichert und refresht Modal
+}
+
+unstackNote(noteId) {
+    // Entfernt Note aus Stack
+    // Löst Stack auf wenn nur 1 Karte übrig
+}
+```
+
+**CSS** (style.css:394-560):
+- Modal: Fixed overlay mit Blur-Effekt
+- Fade-In Animation (scale 0.95 → 1)
+- Badge: Absolut positioniert, top-right
+- Arrow Buttons: Disabled State mit opacity 0.3
+
+**Close-Optionen**:
+- X-Button (stack-modal-close)
+- Klick auf Overlay
+- ESC-Taste (globaler Event-Listener)
+
+### 3. Eingabe-Parsing
 Die `addNote()` Methode parst Benutzereingaben in dieser Reihenfolge:
 
 1. **Kategorie-Tag** (`--k`, `--h`, `--p`) - wird zuerst entfernt
@@ -64,7 +134,7 @@ Input: "Meeting vorbereiten 30m --k"
 → content: "Meeting vorbereiten"
 ```
 
-### 2. Stacking-System
+### 4. Stacking-System
 
 #### Erstellung
 - Drag-Event auf Karte A startet
@@ -82,7 +152,7 @@ Input: "Meeting vorbereiten 30m --k"
 - CSS-Variable `--stack-index` steuert vertikalen Offset
 - Letzte Karte im Array = oberste Karte (höchster z-index)
 
-### 3. Zeit-Berechnung
+### 5. Zeit-Berechnung
 
 #### Einzelne Karte
 ```javascript
@@ -107,7 +177,7 @@ updateTimeStats() {
 }
 ```
 
-### 4. Animation-System
+### 6. Animation-System
 
 #### Fade-In (neue Karten)
 ```css
@@ -123,7 +193,7 @@ updateTimeStats() {
 3. `setTimeout` entfernt Karte aus Array
 4. Re-render
 
-### 5. Farbsystem
+### 7. Farbsystem
 
 Pastel-Farben für Kategorien:
 ```css
@@ -157,6 +227,28 @@ background-size: 2px 100%, 100% 2px, 2px 100%, 100% 2px;
 ```
 
 Vorteil: Gestrichelter Rand mit CSS-Variables kombinierbar.
+
+### 8. Button-Layout (Aktualisiert)
+
+**Normale Karten**:
+```
+Left:  × | Zeit
+Right: ○ | ⋮
+```
+
+**Modal-Karten**:
+```
+Left:  × | Zeit | ↑ | ↓
+Right: ⇢ | ○ | ⋮
+```
+
+Button-Funktionen:
+- **×** - Löschen
+- **Zeit** - Anzeige (nicht klickbar)
+- **↑↓** - Reordering (nur im Modal, disabled bei erster/letzter)
+- **⇢** - Unstack (nur im Modal)
+- **○** - Complete/Erledigen
+- **⋮** - Edit-Menü
 
 ### Stack-Offset
 ```css
@@ -249,6 +341,25 @@ toggleComplete(id) {
 }
 ```
 
+### 4. Edit-Modus State Management
+Original-Werte werden temporär im Note-Object gespeichert:
+```javascript
+note._originalContent = note.content;
+note._originalCategory = note.category;
+note._originalTime = note.timeMinutes;
+
+// Bei Cancel: Restore
+// Bei Save: Delete temporary properties
+```
+
+### 5. Modal Refresh Pattern
+Modal wird nach jeder Aktion komplett neu gerendert:
+```javascript
+// Nach Edit, Delete, Move, Unstack
+this.openStackModal(this.currentStackId);
+```
+Vorteil: State bleibt konsistent, disabled States werden neu berechnet.
+
 ## Design-Entscheidungen
 
 ### Warum keine Frameworks?
@@ -263,10 +374,11 @@ toggleComplete(id) {
 - Privacy (Daten bleiben lokal)
 - Limitierung: ~5-10MB pro Domain
 
-### Warum keine Bearbeitung?
-- Fokus auf Quick Capture
-- Vereinfachtes Datenmodell
-- Fehlerhafte Notizen können gelöscht und neu erstellt werden
+### ~~Warum keine Bearbeitung?~~ (Implementiert!)
+Bearbeitung ist jetzt verfügbar via Dreipunkte-Menü (⋮):
+- Nutzt contenteditable für In-Place-Editing
+- Gleiche Parsing-Logik wie bei Erstellung
+- Temporäre Speicherung ermöglicht Cancel-Funktionalität
 
 ## Erweiterungsmöglichkeiten
 
@@ -367,10 +479,14 @@ Dieses Projekt wurde vollständig mit **Claude Code** entwickelt - einem AI-powe
 5. Vollständige Dokumentation
 
 ### Lessons Learned
-- Parsing-Reihenfolge ist kritisch (Kategorie vor Zeit)
-- CSS Variables für dynamische Farben
-- LocalStorage braucht aktive Cleanup-Logik
-- Animations-Timing wichtig für UX
+- **Parsing-Reihenfolge ist kritisch**: Kategorie vor Zeit, sonst Konflikte
+- **CSS Variables für dynamische Farben**: Ermöglicht flexible Kategorie-Farbgebung
+- **LocalStorage braucht aktive Cleanup-Logik**: Empty stacks müssen entfernt werden
+- **Animations-Timing wichtig für UX**: 300ms für Fade-Out, dann DOM-Operation
+- **Edit via contenteditable**: Einfacher als Input-Overlay, nutzt existierendes DOM
+- **Modal statt Inline-Management**: Klarer für komplexe Interaktionen (Reorder, Unstack)
+- **Buttons > Drag & Drop**: ↑↓ Buttons intuitiver als Drag & Drop für Reordering
+- **Disabled State wichtig**: Verhindert ungültige Operationen (erste/letzte Karte)
 
 ## Kontakt & Beiträge
 
