@@ -15,7 +15,7 @@ A minimalist, terminal-inspired notes and todo management application with advan
 #### 🎨 Color-Coded Categories
 Tag your notes with color categories:
 - `--k` → Turquoise border (e.g., critical tasks)
-- `--h` → Orange border (e.g., high priority)
+- `--h` → Yellow border (e.g., high priority)
 - `--p` → Red border (e.g., projects)
 
 **Example:** `Meeting preparation --k`
@@ -37,9 +37,9 @@ Add time estimates to your notes:
 
 #### 📊 Time Statistics
 Header displays real-time statistics:
-- **k:** Total time for turquoise cards
-- **h:** Total time for orange cards
-- **p:** Total time for violet cards
+- **KSWIL:** Total time for turquoise cards
+- **HSLU:** Total time for yellow cards
+- **Privat:** Total time for red cards
 - **other:** Total time for untagged cards
 - **total:** Sum of all times
 

@@ -57,7 +57,7 @@ body {
 }
 
 .time-stat[data-category="h"] .time-stat-value {
-    color: #FFB380;
+    color: #FFD966;
 }
 
 .time-stat[data-category="p"] .time-stat-value {
@@ -126,7 +126,7 @@ body {
 }
 
 .note-card[data-category="h"] {
-    --card-color: #FFB380;
+    --card-color: #FFD966;
 }
 
 .note-card[data-category="p"] {

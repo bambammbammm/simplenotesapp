@@ -198,7 +198,7 @@ updateTimeStats() {
 Pastel-Farben für Kategorien:
 ```css
 --k: #7FDBDA  /* Türkis */
---h: #FFB380  /* Orange */
+--h: #FFD966  /* Gelb */
 --p: #FF7B7B  /* Rot */
 ```
 
