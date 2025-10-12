@@ -7,7 +7,11 @@ class NotesApp {
         this.welcomeMessage = document.getElementById('welcomeMessage');
         this.noteCountElement = document.querySelector('.note-count');
         this.timeStatsElement = document.getElementById('timeStats');
+        this.stackModal = document.getElementById('stackModal');
+        this.stackModalBody = document.getElementById('stackModalBody');
+        this.stackModalClose = document.getElementById('stackModalClose');
         this.draggedCard = null;
+        this.currentStackId = null;
 
         this.init();
     }
@@ -18,6 +22,15 @@ class NotesApp {
 
         // Event listeners
         this.noteInput.addEventListener('keydown', (e) => this.handleKeyDown(e));
+
+        // Modal event listeners
+        this.stackModalClose.addEventListener('click', () => this.closeStackModal());
+        this.stackModal.querySelector('.stack-modal-overlay').addEventListener('click', () => this.closeStackModal());
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.stackModal.style.display !== 'none') {
+                this.closeStackModal();
+            }
+        });
 
         // Initial render
         this.render();
@@ -121,6 +134,170 @@ class NotesApp {
                 }, 300);
             }
         }
+    }
+
+    enterEditMode(id) {
+        const note = this.notes.find(n => n.id === id);
+        if (!note) return;
+
+        const cardElement = document.querySelector(`[data-note-id="${id}"]`);
+        if (!cardElement) return;
+
+        const contentElement = cardElement.querySelector('.note-content');
+        if (!contentElement) return;
+
+        // Store original content in case of cancel
+        note._originalContent = note.content;
+        note._originalCategory = note.category;
+        note._originalTime = note.timeMinutes;
+
+        // Build full edit string with category and time tags
+        let editText = note.content;
+        if (note.timeMinutes) {
+            editText += ` ${note.timeMinutes}m`;
+        }
+        if (note.category) {
+            editText += ` --${note.category}`;
+        }
+
+        // Make content editable
+        contentElement.contentEditable = true;
+        contentElement.textContent = editText;
+        cardElement.classList.add('editing');
+        cardElement.draggable = false; // Disable dragging while editing
+
+        // Add hint
+        const existingHint = cardElement.querySelector('.edit-hint');
+        if (!existingHint) {
+            const hint = document.createElement('div');
+            hint.className = 'edit-hint';
+            hint.textContent = 'Enter zum Speichern • ESC zum Abbrechen';
+            cardElement.appendChild(hint);
+        }
+
+        // Focus and select text
+        contentElement.focus();
+        const range = document.createRange();
+        range.selectNodeContents(contentElement);
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+
+        // Add keyboard event listeners
+        const handleKeyDown = (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                this.saveEdit(id);
+                contentElement.removeEventListener('keydown', handleKeyDown);
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                this.cancelEdit(id);
+                contentElement.removeEventListener('keydown', handleKeyDown);
+            }
+        };
+
+        contentElement.addEventListener('keydown', handleKeyDown);
+
+        // Store handler for cleanup
+        contentElement._editKeyHandler = handleKeyDown;
+    }
+
+    cancelEdit(id) {
+        const note = this.notes.find(n => n.id === id);
+        if (!note) return;
+
+        // Restore original content
+        if (note._originalContent !== undefined) {
+            note.content = note._originalContent;
+            note.category = note._originalCategory;
+            note.timeMinutes = note._originalTime;
+
+            delete note._originalContent;
+            delete note._originalCategory;
+            delete note._originalTime;
+        }
+
+        this.render();
+    }
+
+    saveEdit(id) {
+        const note = this.notes.find(n => n.id === id);
+        if (!note) return;
+
+        const cardElement = document.querySelector(`[data-note-id="${id}"]`);
+        if (!cardElement) return;
+
+        const contentElement = cardElement.querySelector('.note-content');
+        if (!contentElement) return;
+
+        let content = contentElement.textContent.trim();
+
+        if (content === '') {
+            // If empty, restore original or delete
+            this.cancelEdit(id);
+            return;
+        }
+
+        // Parse content using same logic as addNote
+        // Check for category tags FIRST (e.g., --k, --h, --p)
+        let category = null;
+        const categoryMatch = content.match(/--([khp])$/);
+        if (categoryMatch) {
+            category = categoryMatch[1];
+            content = content.replace(/\s*--[khp]$/, '').trim();
+        }
+
+        // Then check for time estimate (e.g., 15m, 30m, 125m)
+        let timeMinutes = null;
+        const timeMatch = content.match(/\s+(\d+)m$/);
+        if (timeMatch) {
+            timeMinutes = parseInt(timeMatch[1]);
+            content = content.replace(/\s+\d+m$/, '').trim();
+        }
+
+        // Update note
+        note.content = content;
+        note.category = category;
+        note.timeMinutes = timeMinutes;
+
+        // Clean up temporary properties
+        delete note._originalContent;
+        delete note._originalCategory;
+        delete note._originalTime;
+
+        this.saveNotes();
+        this.render();
+    }
+
+    openStackModal(stackId) {
+        this.currentStackId = stackId;
+        const stack = this.stacks.find(s => s.id === stackId);
+        if (!stack) return;
+
+        // Get notes in stack
+        const stackNotes = stack.noteIds
+            .map(id => this.notes.find(n => n.id === id))
+            .filter(n => n);
+
+        // Clear modal body
+        this.stackModalBody.innerHTML = '';
+
+        // Create cards for modal
+        stackNotes.forEach((note, index) => {
+            const isFirst = index === 0;
+            const isLast = index === stackNotes.length - 1;
+            const card = this.createModalCard(note, isFirst, isLast);
+            this.stackModalBody.appendChild(card);
+        });
+
+        // Show modal
+        this.stackModal.style.display = 'flex';
+    }
+
+    closeStackModal() {
+        this.stackModal.style.display = 'none';
+        this.currentStackId = null;
+        this.render(); // Re-render to update stack display
     }
 
     saveNotes() {
@@ -337,6 +514,21 @@ class NotesApp {
         container.className = 'stack-container';
         container.dataset.stackId = stack.id;
 
+        // Add click handler to open stack modal
+        container.addEventListener('click', (e) => {
+            // Only trigger if clicking on the container itself or stacked cards
+            // but not if clicking on buttons
+            if (!e.target.closest('button')) {
+                this.openStackModal(stack.id);
+            }
+        });
+
+        // Add badge showing number of cards
+        const badge = document.createElement('div');
+        badge.className = 'stack-badge';
+        badge.textContent = `${stackNotes.length} cards`;
+        container.appendChild(badge);
+
         // Calculate total time for stack
         const totalTime = stackNotes.reduce((sum, note) => sum + (note.timeMinutes || 0), 0);
 
@@ -380,7 +572,10 @@ class NotesApp {
         const header = document.createElement('div');
         header.className = 'note-header';
 
-        // Delete button (left)
+        // Left side (delete + time)
+        const leftActions = document.createElement('div');
+        leftActions.className = 'note-actions-left';
+
         const deleteBtn = document.createElement('button');
         deleteBtn.className = 'note-delete';
         deleteBtn.innerHTML = '&times;';
@@ -389,7 +584,6 @@ class NotesApp {
             this.deleteNote(note.id);
         });
 
-        // Time display (center-left)
         const timeDisplay = document.createElement('span');
         timeDisplay.className = 'note-time';
 
@@ -401,7 +595,13 @@ class NotesApp {
             timeDisplay.textContent = `${note.timeMinutes}m`;
         }
 
-        // Complete button (right)
+        leftActions.appendChild(deleteBtn);
+        leftActions.appendChild(timeDisplay);
+
+        // Right side (complete + edit menu)
+        const rightActions = document.createElement('div');
+        rightActions.className = 'note-actions-right';
+
         const completeBtn = document.createElement('button');
         completeBtn.className = 'note-complete';
         completeBtn.innerHTML = '&#9675;'; // Circle
@@ -410,9 +610,19 @@ class NotesApp {
             this.toggleComplete(note.id);
         });
 
-        header.appendChild(deleteBtn);
-        header.appendChild(timeDisplay);
-        header.appendChild(completeBtn);
+        const editBtn = document.createElement('button');
+        editBtn.className = 'note-edit';
+        editBtn.innerHTML = '&#8942;'; // Vertical ellipsis (⋮)
+        editBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.enterEditMode(note.id);
+        });
+
+        rightActions.appendChild(completeBtn);
+        rightActions.appendChild(editBtn);
+
+        header.appendChild(leftActions);
+        header.appendChild(rightActions);
 
         const content = document.createElement('div');
         content.className = 'note-content';
@@ -423,6 +633,323 @@ class NotesApp {
 
         return card;
     }
+
+    createModalCard(note, isFirst, isLast) {
+        const card = document.createElement('div');
+        card.className = 'note-card';
+        card.dataset.noteId = note.id;
+
+        // Add category data attribute for color coding
+        if (note.category) {
+            card.dataset.category = note.category;
+        }
+
+        const header = document.createElement('div');
+        header.className = 'note-header';
+
+        // Left side (delete + time + reorder arrows)
+        const leftActions = document.createElement('div');
+        leftActions.className = 'note-actions-left';
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'note-delete';
+        deleteBtn.innerHTML = '&times;';
+        deleteBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.deleteNote(note.id);
+            // Refresh modal
+            if (this.currentStackId) {
+                setTimeout(() => this.openStackModal(this.currentStackId), 350);
+            }
+        });
+
+        const timeDisplay = document.createElement('span');
+        timeDisplay.className = 'note-time';
+        if (note.timeMinutes) {
+            timeDisplay.textContent = `${note.timeMinutes}m`;
+        }
+
+        // Reorder buttons
+        const moveUpBtn = document.createElement('button');
+        moveUpBtn.className = 'note-move-up';
+        moveUpBtn.innerHTML = '&#8593;'; // ↑
+        moveUpBtn.title = 'Nach oben';
+        moveUpBtn.disabled = isFirst;
+        moveUpBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.moveCardUp(note.id);
+        });
+
+        const moveDownBtn = document.createElement('button');
+        moveDownBtn.className = 'note-move-down';
+        moveDownBtn.innerHTML = '&#8595;'; // ↓
+        moveDownBtn.title = 'Nach unten';
+        moveDownBtn.disabled = isLast;
+        moveDownBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.moveCardDown(note.id);
+        });
+
+        leftActions.appendChild(deleteBtn);
+        leftActions.appendChild(timeDisplay);
+        leftActions.appendChild(moveUpBtn);
+        leftActions.appendChild(moveDownBtn);
+
+        // Right side (unstack + complete + edit menu)
+        const rightActions = document.createElement('div');
+        rightActions.className = 'note-actions-right';
+
+        const unstackBtn = document.createElement('button');
+        unstackBtn.className = 'note-unstack';
+        unstackBtn.innerHTML = '&#8690;'; // ⇢ Arrow
+        unstackBtn.title = 'Aus Stack entfernen';
+        unstackBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.unstackNote(note.id);
+        });
+
+        const completeBtn = document.createElement('button');
+        completeBtn.className = 'note-complete';
+        completeBtn.innerHTML = '&#9675;'; // Circle
+        completeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.toggleComplete(note.id);
+            // Refresh modal
+            if (this.currentStackId) {
+                setTimeout(() => this.openStackModal(this.currentStackId), 350);
+            }
+        });
+
+        const editBtn = document.createElement('button');
+        editBtn.className = 'note-edit';
+        editBtn.innerHTML = '&#8942;'; // Vertical ellipsis (⋮)
+        editBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.enterEditModeInModal(note.id);
+        });
+
+        rightActions.appendChild(unstackBtn);
+        rightActions.appendChild(completeBtn);
+        rightActions.appendChild(editBtn);
+
+        header.appendChild(leftActions);
+        header.appendChild(rightActions);
+
+        const content = document.createElement('div');
+        content.className = 'note-content';
+        content.textContent = note.content;
+
+        card.appendChild(header);
+        card.appendChild(content);
+
+        return card;
+    }
+
+    moveCardUp(noteId) {
+        if (!this.currentStackId) return;
+
+        const stack = this.stacks.find(s => s.id === this.currentStackId);
+        if (!stack) return;
+
+        const currentIndex = stack.noteIds.indexOf(noteId);
+        if (currentIndex <= 0) return; // Already at top or not found
+
+        // Swap with previous card
+        [stack.noteIds[currentIndex - 1], stack.noteIds[currentIndex]] =
+        [stack.noteIds[currentIndex], stack.noteIds[currentIndex - 1]];
+
+        this.saveStacks();
+        this.openStackModal(this.currentStackId);
+    }
+
+    moveCardDown(noteId) {
+        if (!this.currentStackId) return;
+
+        const stack = this.stacks.find(s => s.id === this.currentStackId);
+        if (!stack) return;
+
+        const currentIndex = stack.noteIds.indexOf(noteId);
+        if (currentIndex === -1 || currentIndex >= stack.noteIds.length - 1) return; // Already at bottom or not found
+
+        // Swap with next card
+        [stack.noteIds[currentIndex], stack.noteIds[currentIndex + 1]] =
+        [stack.noteIds[currentIndex + 1], stack.noteIds[currentIndex]];
+
+        this.saveStacks();
+        this.openStackModal(this.currentStackId);
+    }
+
+    unstackNote(noteId) {
+        const note = this.notes.find(n => n.id === noteId);
+        if (!note || !note.stackId) return;
+
+        const stackId = note.stackId;
+        const stack = this.stacks.find(s => s.id === stackId);
+        if (!stack) return;
+
+        // Remove note from stack
+        stack.noteIds = stack.noteIds.filter(id => id !== noteId);
+        note.stackId = null;
+
+        // Remove stack if only one card left
+        if (stack.noteIds.length === 1) {
+            const lastNoteId = stack.noteIds[0];
+            const lastNote = this.notes.find(n => n.id === lastNoteId);
+            if (lastNote) {
+                lastNote.stackId = null;
+            }
+            this.stacks = this.stacks.filter(s => s.id !== stackId);
+        }
+
+        // Remove empty stacks
+        this.stacks = this.stacks.filter(s => s.noteIds.length > 0);
+
+        this.saveNotes();
+        this.saveStacks();
+
+        // Refresh modal or close if stack is gone
+        if (stack.noteIds.length === 0) {
+            this.closeStackModal();
+        } else {
+            this.openStackModal(stackId);
+        }
+    }
+
+    enterEditModeInModal(id) {
+        const note = this.notes.find(n => n.id === id);
+        if (!note) return;
+
+        const cardElement = this.stackModalBody.querySelector(`[data-note-id="${id}"]`);
+        if (!cardElement) return;
+
+        const contentElement = cardElement.querySelector('.note-content');
+        if (!contentElement) return;
+
+        // Store original content in case of cancel
+        note._originalContent = note.content;
+        note._originalCategory = note.category;
+        note._originalTime = note.timeMinutes;
+
+        // Build full edit string with category and time tags
+        let editText = note.content;
+        if (note.timeMinutes) {
+            editText += ` ${note.timeMinutes}m`;
+        }
+        if (note.category) {
+            editText += ` --${note.category}`;
+        }
+
+        // Make content editable
+        contentElement.contentEditable = true;
+        contentElement.textContent = editText;
+        cardElement.classList.add('editing');
+        cardElement.draggable = false; // Disable dragging while editing
+
+        // Add hint
+        const existingHint = cardElement.querySelector('.edit-hint');
+        if (!existingHint) {
+            const hint = document.createElement('div');
+            hint.className = 'edit-hint';
+            hint.textContent = 'Enter zum Speichern • ESC zum Abbrechen';
+            cardElement.appendChild(hint);
+        }
+
+        // Focus and select text
+        contentElement.focus();
+        const range = document.createRange();
+        range.selectNodeContents(contentElement);
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+
+        // Add keyboard event listeners
+        const handleKeyDown = (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                this.saveEditInModal(id);
+                contentElement.removeEventListener('keydown', handleKeyDown);
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                this.cancelEditInModal(id);
+                contentElement.removeEventListener('keydown', handleKeyDown);
+            }
+        };
+
+        contentElement.addEventListener('keydown', handleKeyDown);
+    }
+
+    cancelEditInModal(id) {
+        const note = this.notes.find(n => n.id === id);
+        if (!note) return;
+
+        // Restore original content
+        if (note._originalContent !== undefined) {
+            note.content = note._originalContent;
+            note.category = note._originalCategory;
+            note.timeMinutes = note._originalTime;
+
+            delete note._originalContent;
+            delete note._originalCategory;
+            delete note._originalTime;
+        }
+
+        // Refresh modal
+        if (this.currentStackId) {
+            this.openStackModal(this.currentStackId);
+        }
+    }
+
+    saveEditInModal(id) {
+        const note = this.notes.find(n => n.id === id);
+        if (!note) return;
+
+        const cardElement = this.stackModalBody.querySelector(`[data-note-id="${id}"]`);
+        if (!cardElement) return;
+
+        const contentElement = cardElement.querySelector('.note-content');
+        if (!contentElement) return;
+
+        let content = contentElement.textContent.trim();
+
+        if (content === '') {
+            // If empty, restore original
+            this.cancelEditInModal(id);
+            return;
+        }
+
+        // Parse content using same logic as addNote
+        let category = null;
+        const categoryMatch = content.match(/--([khp])$/);
+        if (categoryMatch) {
+            category = categoryMatch[1];
+            content = content.replace(/\s*--[khp]$/, '').trim();
+        }
+
+        let timeMinutes = null;
+        const timeMatch = content.match(/\s+(\d+)m$/);
+        if (timeMatch) {
+            timeMinutes = parseInt(timeMatch[1]);
+            content = content.replace(/\s+\d+m$/, '').trim();
+        }
+
+        // Update note
+        note.content = content;
+        note.category = category;
+        note.timeMinutes = timeMinutes;
+
+        // Clean up temporary properties
+        delete note._originalContent;
+        delete note._originalCategory;
+        delete note._originalTime;
+
+        this.saveNotes();
+
+        // Refresh modal
+        if (this.currentStackId) {
+            this.openStackModal(this.currentStackId);
+        }
+    }
+
 }
 
 // Initialize app when DOM is ready
