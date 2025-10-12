@@ -45,7 +45,15 @@ Header displays real-time statistics:
 
 ### Card Actions
 - **×** (left): Delete card with fade animation
-- **○** (right): Mark as complete (removes card with fade animation)
+- **⋮** (three-dot menu): Edit card content, time, and category
+- **○** (circle): Mark as complete (removes card with fade animation)
+
+### Editing Cards
+1. Click the **⋮** (three-dot menu) button on any card
+2. The card content becomes editable
+3. Modify text, add/change time (e.g., `30m`), or add/change category (e.g., `--k`)
+4. Press **Enter** to save changes
+5. Press **ESC** to cancel and restore original content
 
 ## Usage
 
@@ -58,10 +66,22 @@ Header displays real-time statistics:
 
 ### Organizing with Stacks
 1. Create multiple notes
-2. Drag one card onto another
-3. The cards form a stack
+2. Drag one card onto another to create a stack
+3. The cards form a stack with a badge showing card count
 4. Continue adding cards to the stack by dragging onto it
-5. Hover over stacked cards to see them
+5. **Click on a stack** to open the Stack Modal
+
+### Managing Stacks
+When you click on a stack, a modal opens with powerful management features:
+
+- **View All Cards**: See all cards in the stack laid out vertically
+- **Edit Cards**: Click ⋮ on any card to edit it
+- **Reorder Cards**: Use ↑ and ↓ buttons to move cards up or down
+- **Unstack Cards**: Click ⇢ to remove a card from the stack
+- **Delete/Complete**: Regular × and ○ buttons work in the modal
+- **Close Modal**: Click X button, press ESC, or click outside the modal
+
+The modal makes it easy to work with multiple related tasks grouped in a stack.
 
 ### Time Management
 - Individual cards show their own time estimate
@@ -133,12 +153,30 @@ Review pull requests 30m --h
 Read documentation 60m --p
 ```
 
-### Creating a Stack
+### Creating and Managing a Stack
 1. Create: `Backend API 60m --k`
 2. Create: `Frontend integration 45m --k`
 3. Create: `Testing 30m --k`
-4. Drag all three onto each other
-5. Top card shows: `135m` in white
+4. Drag all three onto each other → Stack shows badge "3 cards"
+5. Top card shows total time: `135m` in white
+6. Click on stack → Modal opens with all three cards
+7. Use ↑↓ buttons to reorder, ⇢ to unstack, ⋮ to edit
+
+## Recent Updates
+
+### ✅ Card Editing (New!)
+Cards can now be edited after creation:
+- Click the **⋮** menu on any card to edit
+- Modify content, time estimates, and categories
+- Same parsing logic as creating new cards
+
+### ✅ Stack Modal Management (New!)
+Enhanced stack interaction with dedicated modal:
+- Click any stack to open a management modal
+- View all cards in the stack clearly
+- Reorder cards with **↑↓** arrow buttons
+- Remove cards from stack with **⇢** button
+- Edit, delete, or complete cards within the modal
 
 ## Planned Features
 
