@@ -3164,21 +3164,24 @@ class NotesApp {
                 title: 'Wechsle zu Board View',
                 description: 'Standard-Ansicht mit Grid-Layout',
                 icon: '⊟',
-                action: () => this.switchToView('board')
+                action: () => this.switchToView('board'),
+                condition: () => this.currentView !== 'board'
             },
             {
                 id: 'view-kanban',
                 title: 'Wechsle zu Kanban View',
                 description: 'Wochenplanung mit Spalten',
                 icon: '⊞',
-                action: () => this.switchToView('kanban')
+                action: () => this.switchToView('kanban'),
+                condition: () => this.currentView !== 'kanban'
             },
             {
                 id: 'view-plan',
                 title: 'Wechsle zu Plan View',
                 description: 'Notizen und Planung',
                 icon: '✎',
-                action: () => this.switchToView('plan')
+                action: () => this.switchToView('plan'),
+                condition: () => this.currentView !== 'plan'
             },
             {
                 id: 'new-note',
