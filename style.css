@@ -2157,20 +2157,14 @@ body {
     border: 1px solid transparent;
 }
 
-.command-item:hover,
-.command-item.selected {
+.command-item:hover {
     background-color: #2a2a2a;
     border-color: #444;
 }
 
 .command-item.selected {
-    background-color: #7FDBDA;
-    color: #0f0f0f;
-}
-
-.command-item.selected .command-shortcut {
-    color: #0f0f0f;
-    opacity: 0.7;
+    background-color: #2a2a2a;
+    border-color: #fff;
 }
 
 .command-icon {
@@ -2193,7 +2187,7 @@ body {
 }
 
 .command-item.selected .command-title {
-    color: #0f0f0f;
+    color: #fff;
 }
 
 .command-description {
@@ -2202,8 +2196,7 @@ body {
 }
 
 .command-item.selected .command-description {
-    color: #0f0f0f;
-    opacity: 0.7;
+    color: #ccc;
 }
 
 .command-shortcut {
