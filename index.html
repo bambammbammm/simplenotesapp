@@ -35,21 +35,30 @@
         <header class="app-header">
             <div class="header-top">
                 <div class="header-left">
-                    <div class="time-stats" id="timeStats"></div>
+                    <div class="header-left-container">
+                        <button class="hamburger-menu-btn" id="hamburgerMenuBtn" title="Menü">
+                            <span class="hamburger-icon">☰</span>
+                        </button>
+                        <div class="time-stats" id="timeStats"></div>
+                    </div>
+                    <!-- Hamburger Dropdown Menu -->
+                    <div class="hamburger-dropdown" id="hamburgerDropdown" style="display: none;">
+                        <div class="dropdown-section">
+                            <h4 class="dropdown-title">Backup</h4>
+                            <button class="dropdown-btn" id="selectBackupFolder" title="Backup-Ordner auswählen">
+                                ⊞ Ordner wählen
+                            </button>
+                            <button class="dropdown-btn" id="manualBackup" title="Backup jetzt erstellen" disabled>
+                                ⊡ Backup
+                            </button>
+                            <button class="dropdown-btn" id="importBackup" title="Backup wiederherstellen">
+                                ⊟ Import
+                            </button>
+                            <div class="backup-status" id="backupStatus">Kein Ordner gewählt</div>
+                        </div>
+                    </div>
                 </div>
                 <div class="header-center">
-                    <div class="backup-controls">
-                        <button class="backup-btn" id="selectBackupFolder" title="Backup-Ordner auswählen">
-                            ⊞ Ordner wählen
-                        </button>
-                        <button class="backup-btn" id="manualBackup" title="Backup jetzt erstellen" disabled>
-                            ⊡ Backup
-                        </button>
-                        <button class="backup-btn" id="importBackup" title="Backup wiederherstellen">
-                            ⊟ Import
-                        </button>
-                        <span class="backup-status" id="backupStatus">Kein Ordner gewählt</span>
-                    </div>
                 </div>
                 <div class="header-right">
                     <button class="view-switch-btn" id="viewSwitchBtn" title="Ansicht wechseln (Board ↔ Kanban)">
@@ -65,6 +74,16 @@
                     <button class="filter-btn" data-filter="category-k" id="filterK">KSWIL</button>
                     <button class="filter-btn" data-filter="category-h" id="filterH">HSLU</button>
                     <button class="filter-btn" data-filter="category-p" id="filterP">Privat</button>
+                    <button class="filter-btn" data-filter="category-u" id="filterU">Unterricht</button>
+                </div>
+                <div class="filter-section">
+                    <span class="filter-label">Klasse:</span>
+                    <button class="filter-btn" data-filter="class-2a" id="filterClass2a">2a</button>
+                    <button class="filter-btn" data-filter="class-2b" id="filterClass2b">2b</button>
+                    <button class="filter-btn" data-filter="class-2c" id="filterClass2c">2c</button>
+                    <button class="filter-btn" data-filter="class-3a" id="filterClass3a">3a</button>
+                    <button class="filter-btn" data-filter="class-3b" id="filterClass3b">3b</button>
+                    <button class="filter-btn" data-filter="class-5" id="filterClass5">5</button>
                 </div>
                 <div class="filter-section">
                     <span class="filter-label">Zeit:</span>
@@ -72,6 +91,12 @@
                     <button class="filter-btn" data-filter="time-16-30" id="filterTime30">16-30m</button>
                     <button class="filter-btn" data-filter="time-31-60" id="filterTime60">31-60m</button>
                     <button class="filter-btn" data-filter="time-60+" id="filterTime60Plus">60m+</button>
+                </div>
+                <div class="filter-section">
+                    <span class="filter-label">Priorität:</span>
+                    <button class="filter-btn" data-filter="priority-1" id="filterPriority1">!</button>
+                    <button class="filter-btn" data-filter="priority-2" id="filterPriority2">!!</button>
+                    <button class="filter-btn" data-filter="priority-3" id="filterPriority3">!!!</button>
                 </div>
                 <div class="filter-section">
                     <span class="filter-label">Tag:</span>
@@ -102,7 +127,12 @@
                 <div class="kanban-column-header">
                     <div class="kanban-header-top">
                         <h3>Nicht zugewiesen</h3>
-                        <span class="kanban-count">0</span>
+                        <div class="kanban-header-actions">
+                            <span class="kanban-count">0</span>
+                            <button class="kanban-collapse-btn" id="collapseUnassignedBtn" title="Spalte zuklappen">
+                                <span class="collapse-icon">‹</span>
+                            </button>
+                        </div>
                     </div>
                     <div class="kanban-time-total">0m</div>
                 </div>
@@ -192,8 +222,11 @@
                     autofocus
                 />
             </div>
-            <div class="input-hint">
-                <span>Enter zum Speichern • ESC zum Löschen</span>
+            <div class="input-bottom">
+                <div class="input-hint">
+                    <span>Enter zum Speichern • ESC zum Löschen • Cmd/Ctrl+Z zum Rückgängig machen</span>
+                </div>
+                <div class="completed-counter" id="completedCounter">0 heute erledigt</div>
             </div>
         </div>
         </div>

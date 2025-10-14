@@ -33,7 +33,9 @@ simplenotesapp/
     completed: Boolean,      // Immer false (wird gelöscht statt completed)
     stackId: Number|null,    // ID des Stacks oder null
     category: String|null,   // 'k', 'h', 'p' oder null
-    timeMinutes: Number|null // Zeitangabe in Minuten
+    timeMinutes: Number|null,// Zeitangabe in Minuten
+    focused: Boolean,        // Scharfgestellt für aktive Aufgaben
+    assignedDay: String|null // 'monday' - 'sunday' oder null für Kanban
 }
 ```
 
@@ -41,7 +43,9 @@ simplenotesapp/
 ```javascript
 {
     id: Number,              // Timestamp-basierte ID
-    noteIds: Array<Number>   // Array von Note-IDs im Stack
+    noteIds: Array<Number>,  // Array von Note-IDs im Stack
+    type: String,            // 'group' oder 'sequential'
+    title: String|null       // Optionaler Stack-Titel
 }
 ```
 
@@ -305,6 +309,136 @@ noteInput.addEventListener('keydown', (e) => {
 });
 ```
 
+## Neue Features
+
+### 1. Kanban-Ansicht
+Wochenplanung mit Drag & Drop zwischen Tagen:
+
+**Struktur**:
+- 8 Spalten: "Nicht zugewiesen" + Montag-Sonntag
+- Spalten-Header mit Karten-Count und Zeit-Total
+- Separate Render-Methode `renderKanban()`
+
+**Implementierung**:
+```javascript
+renderKanban() {
+    // Iteriert durch alle Tage
+    // Gruppiert Karten nach assignedDay
+    // Rendert Stacks und einzelne Karten pro Spalte
+    // Berechnet Zeit-Total (nur Top-Karten bei Stacks)
+}
+
+handleKanbanDrop(e, day) {
+    // Weist Karte oder ganzen Stack einem Tag zu
+    // draggedCard → einzelne Karte
+    // draggedStack → gesamter Stack
+}
+```
+
+**Besonderheiten**:
+- Filter: Zeit/Kategorie aktiv, Tag-Filter ignoriert
+- Stacks: Wenn alle Karten gleichen Tag haben → als Stack rendern
+- Zeit-Berechnung: Nur oberste Karte in Stacks zählt
+- View-Switch: Button im Header wechselt zwischen Board/Kanban
+
+### 2. Filter-System
+Multi-Dimension-Filterung:
+
+**Filter-Typen**:
+```javascript
+// Kategorie
+'category-k', 'category-h', 'category-p'
+
+// Zeit
+'time-0-15', 'time-16-30', 'time-31-60', 'time-60+'
+
+// Tag (nur Board-Ansicht)
+'day-unassigned', 'day-monday', ..., 'day-sunday'
+```
+
+**Logik**:
+```javascript
+getFilteredNotes() {
+    // Sequential Stacks: Nur Top-Karte aktiv
+    // Kategorie: OR-Verknüpfung zwischen aktiven Filtern
+    // Zeit: OR-Verknüpfung zwischen aktiven Filtern
+    // Tag: OR-Verknüpfung (nur in Board)
+    // Zwischen Typen: AND-Verknüpfung
+}
+
+getFilteredNotesForKanban() {
+    // Wie getFilteredNotes() aber ohne Tag-Filter
+}
+```
+
+### 3. Focus/Work-Timer
+Fokussierte Aufgaben mit Timer:
+
+**Features**:
+- Button (•) markiert Karte als `focused`
+- Sidebar erscheint mit Gesamt-Zeit fokussierter Karten
+- Countdown-Timer für Work-Sessions
+- Visuelle Hervorhebung (Kategorie-Farbe als Hintergrund)
+
+**Implementierung**:
+```javascript
+toggleFocus(id) {
+    note.focused = !note.focused;
+    this.updateWorkSidebar();
+}
+
+updateWorkSidebar() {
+    // Berechnet Zeit aller focused=true Karten
+    // Zeigt/versteckt Sidebar
+}
+```
+
+### 4. Stack-Typen
+Zwei Workflow-Arten:
+
+**Group (+)**:
+- Alle Karten aktiv
+- Gemeinsame Kategorie-Sammlung
+- Zeit: Summe aller Karten
+
+**Sequential (→)**:
+- Nur oberste Karte aktiv
+- Workflow mit Reihenfolge
+- Blocked-Karten ausgegraut + ⊠ Wasserzeichen
+- Filter zeigen nur aktive Karte
+
+**Toggle**:
+```javascript
+// Im Stack-Modal
+stackTypeBtn.addEventListener('click', () => {
+    stack.type = stack.type === 'group' ? 'sequential' : 'group';
+    this.updateStackTypeButton(stack.type);
+});
+```
+
+### 5. Automatisches Backup
+File System Access API (Chrome):
+
+**Funktionen**:
+- Ordner-Auswahl mit `showDirectoryPicker()`
+- Auto-Backup alle 5 Minuten
+- IndexedDB speichert Folder-Handle persistent
+- Export/Import als JSON
+
+**Implementierung**:
+```javascript
+async selectBackupFolder() {
+    const dirHandle = await window.showDirectoryPicker();
+    await this.saveFolderHandle(dirHandle);
+    this.startAutoBackup();
+}
+
+async saveFolderHandle(handle) {
+    // IndexedDB: 'backupSettings' store
+    // Permissions prüfen bei Restore
+}
+```
+
 ## Wichtige Implementierungsdetails
 
 ### 1. Stack-Cleanup
@@ -462,6 +596,8 @@ this.timer = {
 
 ### Benötigte APIs
 - LocalStorage
+- IndexedDB (für Backup-Settings)
+- File System Access API (Chrome, für Backup)
 - CSS Grid
 - CSS Custom Properties
 - Drag & Drop API
@@ -487,6 +623,13 @@ Dieses Projekt wurde vollständig mit **Claude Code** entwickelt - einem AI-powe
 - **Modal statt Inline-Management**: Klarer für komplexe Interaktionen (Reorder, Unstack)
 - **Buttons > Drag & Drop**: ↑↓ Buttons intuitiver als Drag & Drop für Reordering
 - **Disabled State wichtig**: Verhindert ungültige Operationen (erste/letzte Karte)
+- **Z-Index Konflikte vermeiden**: Stack-Badge links statt rechts verhindert Button-Überlappung
+- **Event-Listener-Duplikation verhindern**: Flag-Variable für einmalige Registrierung in Render-Loops
+- **View-Separation wichtig**: Separate Render-Methoden (renderBoard/renderKanban) vermeiden Komplexität
+- **Filter-Logik trennen**: Kanban ignoriert Tag-Filter, behält aber Zeit/Kategorie-Filter
+- **Button-Klicks vor Drag schützen**: `e.preventDefault()` + `draggable=false` auf Buttons
+- **IndexedDB für komplexe Daten**: File-Handles brauchen strukturierte Speicherung
+- **Tab-Key problematisch**: Dedicated Button besser als Tab-Switching bei vielen interaktiven Elementen
 
 ## Kontakt & Beiträge
 

@@ -18,6 +18,12 @@ class NotesApp {
         this.currentStackId = null;
         this.currentView = 'board'; // 'board' oder 'kanban'
         this.viewSwitchBtn = document.getElementById('viewSwitchBtn');
+        this.unassignedCollapsed = false; // State for collapsed unassigned column
+        this.collapseUnassignedBtn = document.getElementById('collapseUnassignedBtn');
+
+        // Hamburger menu
+        this.hamburgerMenuBtn = document.getElementById('hamburgerMenuBtn');
+        this.hamburgerDropdown = document.getElementById('hamburgerDropdown');
 
         // Work Timer
         this.workSidebar = document.getElementById('workSidebar');
@@ -42,10 +48,20 @@ class NotesApp {
             k: document.getElementById('filterK'),
             h: document.getElementById('filterH'),
             p: document.getElementById('filterP'),
+            u: document.getElementById('filterU'),
+            class2a: document.getElementById('filterClass2a'),
+            class2b: document.getElementById('filterClass2b'),
+            class2c: document.getElementById('filterClass2c'),
+            class3a: document.getElementById('filterClass3a'),
+            class3b: document.getElementById('filterClass3b'),
+            class5: document.getElementById('filterClass5'),
             time15: document.getElementById('filterTime15'),
             time30: document.getElementById('filterTime30'),
             time60: document.getElementById('filterTime60'),
             time60Plus: document.getElementById('filterTime60Plus'),
+            priority1: document.getElementById('filterPriority1'),
+            priority2: document.getElementById('filterPriority2'),
+            priority3: document.getElementById('filterPriority3'),
             dayUnassigned: document.getElementById('filterDayUnassigned'),
             dayMon: document.getElementById('filterDayMon'),
             dayTue: document.getElementById('filterDayTue'),
@@ -65,18 +81,55 @@ class NotesApp {
         this.importBackupBtn = document.getElementById('importBackup');
         this.backupStatusElement = document.getElementById('backupStatus');
 
+        // Completed counter
+        this.completedToday = 0;
+        this.lastResetDate = null;
+        this.completedCounterElement = document.getElementById('completedCounter');
+
+        // Undo functionality
+        this.undoHistory = null; // Stores the last state for undo
+
         this.init();
     }
 
     async init() {
         // Load notes from localStorage
         this.loadNotes();
+        this.loadCompletedCounter();
+        this.loadKanbanSettings();
+        this.checkAndResetCounter();
 
         // Event listeners
         this.noteInput.addEventListener('keydown', (e) => this.handleKeyDown(e));
 
+        // Undo listener (Cmd+Z / Ctrl+Z)
+        document.addEventListener('keydown', (e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
+                e.preventDefault();
+                this.undo();
+            }
+        });
+
         // View switching button
         this.viewSwitchBtn.addEventListener('click', () => this.switchView());
+
+        // Collapse unassigned column button
+        this.collapseUnassignedBtn.addEventListener('click', () => this.toggleUnassignedCollapse());
+
+        // Hamburger menu
+        this.hamburgerMenuBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.toggleHamburgerMenu();
+        });
+
+        // Close hamburger menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (this.hamburgerDropdown.style.display === 'block' &&
+                !this.hamburgerDropdown.contains(e.target) &&
+                !this.hamburgerMenuBtn.contains(e.target)) {
+                this.closeHamburgerMenu();
+            }
+        });
 
         // Modal event listeners
         this.stackModalClose.addEventListener('click', () => this.closeStackModal());
@@ -128,15 +181,31 @@ class NotesApp {
 
         if (content === '') return;
 
-        // Check for category tags FIRST (e.g., --k, --h, --p)
+        // Check for category tags FIRST (e.g., --k, --h, --p, --u2a, --u3b, etc.)
         let category = null;
-        const categoryMatch = content.match(/--([khp])$/);
-        if (categoryMatch) {
-            category = categoryMatch[1];
-            content = content.replace(/\s*--[khp]$/, '').trim();
+        let uClass = null;
+        const uCategoryMatch = content.match(/--u(2a|2b|2c|3a|3b|5)$/);
+        if (uCategoryMatch) {
+            category = 'u';
+            uClass = uCategoryMatch[1];
+            content = content.replace(/\s*--u(2a|2b|2c|3a|3b|5)$/, '').trim();
+        } else {
+            const categoryMatch = content.match(/--([khp])$/);
+            if (categoryMatch) {
+                category = categoryMatch[1];
+                content = content.replace(/\s*--[khp]$/, '').trim();
+            }
         }
 
-        // Then check for time estimate (e.g., 15m, 30m, 125m)
+        // Then check for priority (e.g., !, !!, !!!)
+        let priority = null;
+        const priorityMatch = content.match(/\s+(!!!|!!|!)$/);
+        if (priorityMatch) {
+            priority = priorityMatch[1];
+            content = content.replace(/\s+(!!!|!!|!)$/, '').trim();
+        }
+
+        // Finally check for time estimate (e.g., 15m, 30m, 125m)
         let timeMinutes = null;
         const timeMatch = content.match(/\s+(\d+)m$/);
         if (timeMatch) {
@@ -151,6 +220,8 @@ class NotesApp {
             completed: false,
             stackId: null,
             category: category,
+            uClass: uClass, // For --u category: '2a', '2b', '2c', '3a', '3b', '5'
+            priority: priority,
             timeMinutes: timeMinutes,
             focused: false, // Scharfgestellt für aktive Aufgaben
             assignedDay: null, // 'monday', 'tuesday', ..., 'sunday' oder null
@@ -178,6 +249,9 @@ class NotesApp {
             this.saveStacks();
             this.render();
         } else {
+            // Save state for undo BEFORE making changes
+            this.saveStateForUndo();
+
             // Find the card element and animate it
             const cardElement = document.querySelector(`[data-note-id="${id}"]`);
             if (cardElement) {
@@ -192,6 +266,9 @@ class NotesApp {
     toggleComplete(id) {
         const note = this.notes.find(n => n.id === id);
         if (note) {
+            // Save state for undo BEFORE making changes
+            this.saveStateForUndo();
+
             // Find the card element and animate it
             const cardElement = document.querySelector(`[data-note-id="${id}"]`);
             if (cardElement) {
@@ -206,6 +283,11 @@ class NotesApp {
 
                     // Remove empty stacks
                     this.stacks = this.stacks.filter(stack => stack.noteIds.length > 0);
+
+                    // Increment completed counter (only for circle button)
+                    this.completedToday++;
+                    this.saveCompletedCounter();
+                    this.updateCompletedCounter();
 
                     this.saveNotes();
                     this.saveStacks();
@@ -400,7 +482,7 @@ class NotesApp {
             }
 
             // Check category filters
-            const categoryFilters = ['category-k', 'category-h', 'category-p'];
+            const categoryFilters = ['category-k', 'category-h', 'category-p', 'category-u'];
             const activeCategoryFilters = categoryFilters.filter(f => this.activeFilters.has(f));
 
             if (activeCategoryFilters.length > 0) {
@@ -410,6 +492,19 @@ class NotesApp {
                 });
 
                 if (!matchesCategory) return false;
+            }
+
+            // Check class filters (for --u category)
+            const classFilters = ['class-2a', 'class-2b', 'class-2c', 'class-3a', 'class-3b', 'class-5'];
+            const activeClassFilters = classFilters.filter(f => this.activeFilters.has(f));
+
+            if (activeClassFilters.length > 0) {
+                const matchesClass = activeClassFilters.some(filter => {
+                    const cls = filter.split('-')[1];
+                    return note.category === 'u' && note.uClass === cls;
+                });
+
+                if (!matchesClass) return false;
             }
 
             // Check time filters
@@ -427,6 +522,21 @@ class NotesApp {
                 });
 
                 if (!matchesTime) return false;
+            }
+
+            // Check priority filters
+            const priorityFilters = ['priority-1', 'priority-2', 'priority-3'];
+            const activePriorityFilters = priorityFilters.filter(f => this.activeFilters.has(f));
+
+            if (activePriorityFilters.length > 0) {
+                const matchesPriority = activePriorityFilters.some(filter => {
+                    if (filter === 'priority-1') return note.priority === '!';
+                    if (filter === 'priority-2') return note.priority === '!!';
+                    if (filter === 'priority-3') return note.priority === '!!!';
+                    return false;
+                });
+
+                if (!matchesPriority) return false;
             }
 
             // Check day filters
@@ -460,14 +570,21 @@ class NotesApp {
         // Store original content in case of cancel
         note._originalContent = note.content;
         note._originalCategory = note.category;
+        note._originalUClass = note.uClass;
+        note._originalPriority = note.priority;
         note._originalTime = note.timeMinutes;
 
-        // Build full edit string with category and time tags
+        // Build full edit string with category, priority and time tags
         let editText = note.content;
         if (note.timeMinutes) {
             editText += ` ${note.timeMinutes}m`;
         }
-        if (note.category) {
+        if (note.priority) {
+            editText += ` ${note.priority}`;
+        }
+        if (note.category === 'u' && note.uClass) {
+            editText += ` --u${note.uClass}`;
+        } else if (note.category) {
             editText += ` --${note.category}`;
         }
 
@@ -521,10 +638,14 @@ class NotesApp {
         if (note._originalContent !== undefined) {
             note.content = note._originalContent;
             note.category = note._originalCategory;
+            note.uClass = note._originalUClass;
+            note.priority = note._originalPriority;
             note.timeMinutes = note._originalTime;
 
             delete note._originalContent;
             delete note._originalCategory;
+            delete note._originalUClass;
+            delete note._originalPriority;
             delete note._originalTime;
         }
 
@@ -549,16 +670,45 @@ class NotesApp {
             return;
         }
 
-        // Parse content using same logic as addNote
-        // Check for category tags FIRST (e.g., --k, --h, --p)
-        let category = null;
-        const categoryMatch = content.match(/--([khp])$/);
-        if (categoryMatch) {
-            category = categoryMatch[1];
-            content = content.replace(/\s*--[khp]$/, '').trim();
+        // Check if content actually changed
+        const hasChanged =
+            note._originalContent !== undefined &&
+            (content !== note._originalContent ||
+             note._originalCategory !== note.category ||
+             note._originalPriority !== note.priority ||
+             note._originalTime !== note.timeMinutes);
+
+        if (hasChanged) {
+            // Save state for undo BEFORE making changes
+            this.saveStateForUndo();
         }
 
-        // Then check for time estimate (e.g., 15m, 30m, 125m)
+        // Parse content using same logic as addNote
+        // Check for category tags FIRST (e.g., --k, --h, --p, --u2a, --u3b, etc.)
+        let category = null;
+        let uClass = null;
+        const uCategoryMatch = content.match(/--u(2a|2b|2c|3a|3b|5)$/);
+        if (uCategoryMatch) {
+            category = 'u';
+            uClass = uCategoryMatch[1];
+            content = content.replace(/\s*--u(2a|2b|2c|3a|3b|5)$/, '').trim();
+        } else {
+            const categoryMatch = content.match(/--([khp])$/);
+            if (categoryMatch) {
+                category = categoryMatch[1];
+                content = content.replace(/\s*--[khp]$/, '').trim();
+            }
+        }
+
+        // Then check for priority (e.g., !, !!, !!!)
+        let priority = null;
+        const priorityMatch = content.match(/\s+(!!!|!!|!)$/);
+        if (priorityMatch) {
+            priority = priorityMatch[1];
+            content = content.replace(/\s+(!!!|!!|!)$/, '').trim();
+        }
+
+        // Finally check for time estimate (e.g., 15m, 30m, 125m)
         let timeMinutes = null;
         const timeMatch = content.match(/\s+(\d+)m$/);
         if (timeMatch) {
@@ -569,11 +719,15 @@ class NotesApp {
         // Update note
         note.content = content;
         note.category = category;
+        note.uClass = uClass;
+        note.priority = priority;
         note.timeMinutes = timeMinutes;
 
         // Clean up temporary properties
         delete note._originalContent;
         delete note._originalCategory;
+        delete note._originalUClass;
+        delete note._originalPriority;
         delete note._originalTime;
 
         this.saveNotes();
@@ -688,6 +842,54 @@ class NotesApp {
 
     saveStacks() {
         localStorage.setItem('simpleStacks', JSON.stringify(this.stacks));
+    }
+
+    loadKanbanSettings() {
+        const saved = localStorage.getItem('kanbanSettings');
+        if (saved) {
+            const settings = JSON.parse(saved);
+            this.unassignedCollapsed = settings.unassignedCollapsed || false;
+        }
+    }
+
+    saveKanbanSettings() {
+        const settings = {
+            unassignedCollapsed: this.unassignedCollapsed
+        };
+        localStorage.setItem('kanbanSettings', JSON.stringify(settings));
+    }
+
+    toggleUnassignedCollapse() {
+        this.unassignedCollapsed = !this.unassignedCollapsed;
+        this.saveKanbanSettings();
+        this.updateUnassignedColumnState();
+    }
+
+    updateUnassignedColumnState() {
+        const unassignedColumn = this.kanbanView.querySelector('.kanban-column[data-day="unassigned"]');
+        const collapseIcon = this.collapseUnassignedBtn.querySelector('.collapse-icon');
+
+        if (this.unassignedCollapsed) {
+            unassignedColumn.classList.add('collapsed');
+            collapseIcon.textContent = '›';
+            this.collapseUnassignedBtn.title = 'Spalte aufklappen';
+        } else {
+            unassignedColumn.classList.remove('collapsed');
+            collapseIcon.textContent = '‹';
+            this.collapseUnassignedBtn.title = 'Spalte zuklappen';
+        }
+    }
+
+    toggleHamburgerMenu() {
+        if (this.hamburgerDropdown.style.display === 'none' || !this.hamburgerDropdown.style.display) {
+            this.hamburgerDropdown.style.display = 'block';
+        } else {
+            this.hamburgerDropdown.style.display = 'none';
+        }
+    }
+
+    closeHamburgerMenu() {
+        this.hamburgerDropdown.style.display = 'none';
     }
 
     createStack(noteIds) {
@@ -883,6 +1085,9 @@ class NotesApp {
         this.updateTimeStats();
         this.updateWorkSidebar();
 
+        // Update collapsed state for unassigned column
+        this.updateUnassignedColumnState();
+
         // Get filtered notes (excluding day filters for Kanban)
         const filteredNotes = this.getFilteredNotesForKanban();
         const filteredIds = new Set(filteredNotes.map(n => n.id));
@@ -980,7 +1185,7 @@ class NotesApp {
             // Render individual notes (not in stacks)
             dayNotes.forEach(note => {
                 if (!renderedNotes.has(note.id)) {
-                    const noteCard = this.createNoteCard(note);
+                    const noteCard = this.createNoteCard(note, null, 1, null, null, true); // Pass isKanban=true
                     columnBody.appendChild(noteCard);
                 }
             });
@@ -1006,7 +1211,7 @@ class NotesApp {
             }
 
             // Check category filters
-            const categoryFilters = ['category-k', 'category-h', 'category-p'];
+            const categoryFilters = ['category-k', 'category-h', 'category-p', 'category-u'];
             const activeCategoryFilters = categoryFilters.filter(f => this.activeFilters.has(f));
 
             if (activeCategoryFilters.length > 0) {
@@ -1016,6 +1221,19 @@ class NotesApp {
                 });
 
                 if (!matchesCategory) return false;
+            }
+
+            // Check class filters (for --u category)
+            const classFilters = ['class-2a', 'class-2b', 'class-2c', 'class-3a', 'class-3b', 'class-5'];
+            const activeClassFilters = classFilters.filter(f => this.activeFilters.has(f));
+
+            if (activeClassFilters.length > 0) {
+                const matchesClass = activeClassFilters.some(filter => {
+                    const cls = filter.split('-')[1];
+                    return note.category === 'u' && note.uClass === cls;
+                });
+
+                if (!matchesClass) return false;
             }
 
             // Check time filters
@@ -1033,6 +1251,21 @@ class NotesApp {
                 });
 
                 if (!matchesTime) return false;
+            }
+
+            // Check priority filters
+            const priorityFilters = ['priority-1', 'priority-2', 'priority-3'];
+            const activePriorityFilters = priorityFilters.filter(f => this.activeFilters.has(f));
+
+            if (activePriorityFilters.length > 0) {
+                const matchesPriority = activePriorityFilters.some(filter => {
+                    if (filter === 'priority-1') return note.priority === '!';
+                    if (filter === 'priority-2') return note.priority === '!!';
+                    if (filter === 'priority-3') return note.priority === '!!!';
+                    return false;
+                });
+
+                if (!matchesPriority) return false;
             }
 
             // Note: Day filters are NOT applied in Kanban view
@@ -1175,6 +1408,7 @@ class NotesApp {
             k: 0,
             h: 0,
             p: 0,
+            u: 0,
             none: 0,
             total: 0
         };
@@ -1189,6 +1423,8 @@ class NotesApp {
                 stats.h += time;
             } else if (note.category === 'p') {
                 stats.p += time;
+            } else if (note.category === 'u') {
+                stats.u += time;
             } else {
                 stats.none += time;
             }
@@ -1207,6 +1443,10 @@ class NotesApp {
 
         if (stats.p > 0) {
             html += `<div class="time-stat" data-category="p"><span class="time-stat-label">Privat:</span><span class="time-stat-value">${stats.p}m</span></div>`;
+        }
+
+        if (stats.u > 0) {
+            html += `<div class="time-stat" data-category="u"><span class="time-stat-label">Unterricht:</span><span class="time-stat-value">${stats.u}m</span></div>`;
         }
 
         if (stats.none > 0) {
@@ -1269,7 +1509,7 @@ class NotesApp {
         return container;
     }
 
-    createNoteCard(note, stackIndex = null, totalInStack = 1, stackTotalTime = null, stackTitle = null) {
+    createNoteCard(note, stackIndex = null, totalInStack = 1, stackTotalTime = null, stackTitle = null, isKanban = false) {
         const card = document.createElement('div');
         card.className = 'note-card';
         if (note.completed) {
@@ -1294,10 +1534,14 @@ class NotesApp {
         card.draggable = true;
         card.addEventListener('dragstart', (e) => this.handleDragStart(e, note.id));
         card.addEventListener('dragend', (e) => this.handleDragEnd(e));
-        card.addEventListener('dragover', (e) => this.handleDragOver(e));
-        card.addEventListener('dragenter', (e) => this.handleDragEnter(e, note.id));
-        card.addEventListener('dragleave', (e) => this.handleDragLeave(e));
-        card.addEventListener('drop', (e) => this.handleDrop(e, note.id));
+
+        // In Kanban view, individual cards should not be droppable (only columns are)
+        if (!isKanban) {
+            card.addEventListener('dragover', (e) => this.handleDragOver(e));
+            card.addEventListener('dragenter', (e) => this.handleDragEnter(e, note.id));
+            card.addEventListener('dragleave', (e) => this.handleDragLeave(e));
+            card.addEventListener('drop', (e) => this.handleDrop(e, note.id));
+        }
 
         const header = document.createElement('div');
         header.className = 'note-header';
@@ -1321,6 +1565,22 @@ class NotesApp {
 
         leftActions.appendChild(deleteBtn);
         leftActions.appendChild(timeDisplay);
+
+        // Priority indicator (between left and center)
+        if (note.priority) {
+            const priorityDisplay = document.createElement('span');
+            priorityDisplay.className = 'note-priority';
+            priorityDisplay.textContent = note.priority;
+            leftActions.appendChild(priorityDisplay);
+        }
+
+        // Class badge for --u category
+        if (note.category === 'u' && note.uClass) {
+            const classBadge = document.createElement('span');
+            classBadge.className = 'note-class-badge';
+            classBadge.textContent = note.uClass;
+            leftActions.appendChild(classBadge);
+        }
 
         // Center (focus button)
         const centerActions = document.createElement('div');
@@ -1474,6 +1734,22 @@ class NotesApp {
         leftActions.appendChild(moveUpBtn);
         leftActions.appendChild(moveDownBtn);
 
+        // Priority indicator
+        if (note.priority) {
+            const priorityDisplay = document.createElement('span');
+            priorityDisplay.className = 'note-priority';
+            priorityDisplay.textContent = note.priority;
+            leftActions.appendChild(priorityDisplay);
+        }
+
+        // Class badge for --u category
+        if (note.category === 'u' && note.uClass) {
+            const classBadge = document.createElement('span');
+            classBadge.className = 'note-class-badge';
+            classBadge.textContent = note.uClass;
+            leftActions.appendChild(classBadge);
+        }
+
         // Center (focus button)
         const centerActions = document.createElement('div');
         centerActions.className = 'note-actions-center';
@@ -1556,6 +1832,9 @@ class NotesApp {
         const currentIndex = stack.noteIds.indexOf(noteId);
         if (currentIndex <= 0) return; // Already at top or not found
 
+        // Save state for undo
+        this.saveStateForUndo();
+
         // Swap with previous card
         [stack.noteIds[currentIndex - 1], stack.noteIds[currentIndex]] =
         [stack.noteIds[currentIndex], stack.noteIds[currentIndex - 1]];
@@ -1573,6 +1852,9 @@ class NotesApp {
         const currentIndex = stack.noteIds.indexOf(noteId);
         if (currentIndex === -1 || currentIndex >= stack.noteIds.length - 1) return; // Already at bottom or not found
 
+        // Save state for undo
+        this.saveStateForUndo();
+
         // Swap with next card
         [stack.noteIds[currentIndex], stack.noteIds[currentIndex + 1]] =
         [stack.noteIds[currentIndex + 1], stack.noteIds[currentIndex]];
@@ -1584,6 +1866,9 @@ class NotesApp {
     unstackNote(noteId) {
         const note = this.notes.find(n => n.id === noteId);
         if (!note || !note.stackId) return;
+
+        // Save state for undo
+        this.saveStateForUndo();
 
         const stackId = note.stackId;
         const stack = this.stacks.find(s => s.id === stackId);
@@ -1630,14 +1915,21 @@ class NotesApp {
         // Store original content in case of cancel
         note._originalContent = note.content;
         note._originalCategory = note.category;
+        note._originalUClass = note.uClass;
+        note._originalPriority = note.priority;
         note._originalTime = note.timeMinutes;
 
-        // Build full edit string with category and time tags
+        // Build full edit string with category, priority and time tags
         let editText = note.content;
         if (note.timeMinutes) {
             editText += ` ${note.timeMinutes}m`;
         }
-        if (note.category) {
+        if (note.priority) {
+            editText += ` ${note.priority}`;
+        }
+        if (note.category === 'u' && note.uClass) {
+            editText += ` --u${note.uClass}`;
+        } else if (note.category) {
             editText += ` --${note.category}`;
         }
 
@@ -1688,10 +1980,14 @@ class NotesApp {
         if (note._originalContent !== undefined) {
             note.content = note._originalContent;
             note.category = note._originalCategory;
+            note.uClass = note._originalUClass;
+            note.priority = note._originalPriority;
             note.timeMinutes = note._originalTime;
 
             delete note._originalContent;
             delete note._originalCategory;
+            delete note._originalUClass;
+            delete note._originalPriority;
             delete note._originalTime;
         }
 
@@ -1719,12 +2015,41 @@ class NotesApp {
             return;
         }
 
+        // Check if content actually changed
+        const hasChanged =
+            note._originalContent !== undefined &&
+            (content !== note._originalContent ||
+             note._originalCategory !== note.category ||
+             note._originalPriority !== note.priority ||
+             note._originalTime !== note.timeMinutes);
+
+        if (hasChanged) {
+            // Save state for undo BEFORE making changes
+            this.saveStateForUndo();
+        }
+
         // Parse content using same logic as addNote
         let category = null;
-        const categoryMatch = content.match(/--([khp])$/);
-        if (categoryMatch) {
-            category = categoryMatch[1];
-            content = content.replace(/\s*--[khp]$/, '').trim();
+        let uClass = null;
+        const uCategoryMatch = content.match(/--u(2a|2b|2c|3a|3b|5)$/);
+        if (uCategoryMatch) {
+            category = 'u';
+            uClass = uCategoryMatch[1];
+            content = content.replace(/\s*--u(2a|2b|2c|3a|3b|5)$/, '').trim();
+        } else {
+            const categoryMatch = content.match(/--([khp])$/);
+            if (categoryMatch) {
+                category = categoryMatch[1];
+                content = content.replace(/\s*--[khp]$/, '').trim();
+            }
+        }
+
+        // Then check for priority (e.g., !, !!, !!!)
+        let priority = null;
+        const priorityMatch = content.match(/\s+(!!!|!!|!)$/);
+        if (priorityMatch) {
+            priority = priorityMatch[1];
+            content = content.replace(/\s+(!!!|!!|!)$/, '').trim();
         }
 
         let timeMinutes = null;
@@ -1737,11 +2062,15 @@ class NotesApp {
         // Update note
         note.content = content;
         note.category = category;
+        note.uClass = uClass;
+        note.priority = priority;
         note.timeMinutes = timeMinutes;
 
         // Clean up temporary properties
         delete note._originalContent;
         delete note._originalCategory;
+        delete note._originalUClass;
+        delete note._originalPriority;
         delete note._originalTime;
 
         this.saveNotes();
@@ -1750,6 +2079,79 @@ class NotesApp {
         if (this.currentStackId) {
             this.openStackModal(this.currentStackId);
         }
+    }
+
+    // ========== Completed Counter ==========
+
+    loadCompletedCounter() {
+        const saved = localStorage.getItem('completedCounter');
+        if (saved) {
+            const data = JSON.parse(saved);
+            this.completedToday = data.completedToday || 0;
+            this.lastResetDate = data.lastResetDate || null;
+        }
+    }
+
+    saveCompletedCounter() {
+        const data = {
+            completedToday: this.completedToday,
+            lastResetDate: this.lastResetDate
+        };
+        localStorage.setItem('completedCounter', JSON.stringify(data));
+    }
+
+    checkAndResetCounter() {
+        const today = new Date().toDateString();
+
+        if (this.lastResetDate !== today) {
+            // New day, reset counter
+            this.completedToday = 0;
+            this.lastResetDate = today;
+            this.saveCompletedCounter();
+        }
+
+        this.updateCompletedCounter();
+    }
+
+    updateCompletedCounter() {
+        if (this.completedCounterElement) {
+            this.completedCounterElement.textContent = `${this.completedToday} heute erledigt`;
+        }
+    }
+
+    // ========== Undo Functionality ==========
+
+    saveStateForUndo() {
+        // Save current state (deep copy)
+        this.undoHistory = {
+            notes: JSON.parse(JSON.stringify(this.notes)),
+            stacks: JSON.parse(JSON.stringify(this.stacks)),
+            completedToday: this.completedToday
+        };
+    }
+
+    undo() {
+        if (!this.undoHistory) {
+            console.log('Kein Undo verfügbar');
+            return;
+        }
+
+        // Restore previous state
+        this.notes = this.undoHistory.notes;
+        this.stacks = this.undoHistory.stacks;
+        this.completedToday = this.undoHistory.completedToday;
+
+        // Clear undo history (only one level)
+        this.undoHistory = null;
+
+        // Save and render
+        this.saveNotes();
+        this.saveStacks();
+        this.saveCompletedCounter();
+        this.updateCompletedCounter();
+        this.render();
+
+        console.log('Undo ausgeführt');
     }
 
     // ========== Backup System ==========
