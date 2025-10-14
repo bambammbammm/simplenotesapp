@@ -238,26 +238,22 @@ class NotesApp {
                         e.target.tagName === 'TEXTAREA' ||
                         e.target.isContentEditable;
 
-        // Cmd/Ctrl+↑ or Cmd/Ctrl+↓ → Open Command Palette
-        if (cmdOrCtrl && (e.key === 'ArrowUp' || e.key === 'ArrowDown') && !isTyping) {
-            e.preventDefault();
+        // Cmd/Ctrl+↑ or Cmd/Ctrl+↓ → Open Command Palette or Navigate
+        if (cmdOrCtrl && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+            e.preventDefault(); // Prevent cursor movement in contenteditable
+
             if (this.commandPalette.style.display === 'none') {
+                // Open palette
                 this.openCommandPalette();
+            } else {
+                // Navigate in open palette
+                if (e.key === 'ArrowDown') {
+                    this.navigateCommandPalette(1);
+                } else {
+                    this.navigateCommandPalette(-1);
+                }
             }
             return;
-        }
-
-        // Arrow keys when Command Palette is open
-        if (this.commandPalette.style.display !== 'none') {
-            if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                this.navigateCommandPalette(1);
-                return;
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                this.navigateCommandPalette(-1);
-                return;
-            }
         }
 
         // Cmd/Ctrl+S → Save (Plan View only)
