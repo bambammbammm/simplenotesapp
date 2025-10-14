@@ -20,6 +20,10 @@
 
                 <div class="work-timer" id="workTimer" style="display: none;">
                     <div class="timer-display" id="timerDisplay">00:00:00</div>
+                    <div class="end-time-display" id="endTimeDisplay" style="display: none;">
+                        <span class="end-time-label">Fertig um:</span>
+                        <span class="end-time-value" id="endTimeValue">--:--</span>
+                    </div>
                     <div class="timer-controls">
                         <button class="timer-btn pause-btn" id="pauseBtn">‖ Pause</button>
                         <button class="timer-btn stop-btn" id="stopBtn">□ Stop</button>
@@ -27,6 +31,24 @@
                 </div>
 
                 <button class="start-work-btn" id="startWorkBtn">▸ Start Work</button>
+
+                <div class="session-summary" id="sessionSummary" style="display: none;">
+                    <div class="session-summary-title">Session beendet!</div>
+                    <div class="session-summary-content">
+                        <div class="session-stat">
+                            <span class="session-stat-label">Geplant:</span>
+                            <span class="session-stat-value" id="sessionPlanned">0m</span>
+                        </div>
+                        <div class="session-stat">
+                            <span class="session-stat-label">Tatsächlich:</span>
+                            <span class="session-stat-value" id="sessionActual">0m</span>
+                        </div>
+                        <div class="session-difference" id="sessionDifference">
+                            <!-- Will show "+5m schneller" or "-5m länger" -->
+                        </div>
+                    </div>
+                    <button class="session-summary-close" id="sessionSummaryClose">OK</button>
+                </div>
             </div>
         </aside>
 
@@ -207,6 +229,28 @@
                     <div class="kanban-time-total">0m</div>
                 </div>
                 <div class="kanban-column-body" data-day="sunday"></div>
+            </div>
+        </main>
+
+        <!-- Plan View -->
+        <main class="plan-view" id="planView" style="display: none;">
+            <div class="plan-editor-container">
+                <div
+                    class="plan-editor"
+                    id="planEditor"
+                    contenteditable="true"
+                    spellcheck="false"
+                    data-placeholder="Beginnen Sie mit der Planung...
+
+Shortcuts:
+• Cmd+B → Fett
+• Cmd+I → Kursiv
+• Cmd+Shift+8 → Bullet-Liste
+• Cmd+Shift+C → Checkbox
+• Alt+X → Checkbox umschalten
+
+Tipp: Schreiben Sie (Task-Name 30m --k) um automatisch eine Aufgabe zu erstellen."
+                ></div>
             </div>
         </main>
 

@@ -95,6 +95,32 @@ body {
     font-family: 'SF Mono', monospace;
 }
 
+.end-time-display {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    background-color: #1a1a1a;
+    border-radius: 6px;
+    border: 1px solid #2a2a2a;
+}
+
+.end-time-label {
+    font-size: 12px;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.end-time-value {
+    font-size: 16px;
+    font-weight: 700;
+    color: #7FDBDA;
+    font-variant-numeric: tabular-nums;
+    font-family: 'SF Mono', monospace;
+}
+
 .timer-controls {
     display: flex;
     gap: 8px;
@@ -154,6 +180,119 @@ body {
 
 .start-work-btn:active {
     transform: translateY(0);
+}
+
+/* Session Summary */
+.session-summary {
+    background-color: #0f0f0f;
+    border: 2px solid #2ecc71;
+    border-radius: 8px;
+    padding: 16px;
+    margin-top: 12px;
+    animation: fadeInScale 0.3s ease-out;
+}
+
+@keyframes fadeInScale {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.session-summary-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #2ecc71;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+}
+
+.session-summary-content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.session-stat {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+}
+
+.session-stat-label {
+    font-size: 12px;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.session-stat-value {
+    font-size: 14px;
+    font-weight: 700;
+    color: #e0e0e0;
+    font-variant-numeric: tabular-nums;
+    font-family: 'SF Mono', monospace;
+}
+
+.session-difference {
+    text-align: center;
+    font-size: 16px;
+    font-weight: 700;
+    padding: 12px;
+    border-radius: 6px;
+    margin-top: 8px;
+    font-family: 'SF Mono', monospace;
+}
+
+.session-difference.faster {
+    background-color: rgba(46, 204, 113, 0.1);
+    color: #2ecc71;
+    border: 1px solid rgba(46, 204, 113, 0.3);
+}
+
+.session-difference.slower {
+    background-color: rgba(255, 123, 123, 0.1);
+    color: #FF7B7B;
+    border: 1px solid rgba(255, 123, 123, 0.3);
+}
+
+.session-difference.exact {
+    background-color: rgba(127, 219, 218, 0.1);
+    color: #7FDBDA;
+    border: 1px solid rgba(127, 219, 218, 0.3);
+}
+
+.session-summary-close {
+    width: 100%;
+    background-color: #2a2a2a;
+    border: 1px solid #3a3a3a;
+    border-radius: 6px;
+    color: #e0e0e0;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: inherit;
+    padding: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.session-summary-close:hover {
+    background-color: #333;
+    border-color: #444;
+}
+
+.session-summary-close:active {
+    transform: scale(0.98);
 }
 
 /* Header */
@@ -299,6 +438,43 @@ body {
 
 .time-stat[data-category="u"] .time-stat-value {
     color: #B19CD9;
+}
+
+/* Session statistics in header */
+.time-stat.session-stat {
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid;
+}
+
+.time-stat.session-stat.faster {
+    background-color: rgba(46, 204, 113, 0.1);
+    border-color: rgba(46, 204, 113, 0.3);
+}
+
+.time-stat.session-stat.faster .time-stat-label,
+.time-stat.session-stat.faster .time-stat-value {
+    color: #2ecc71;
+}
+
+.time-stat.session-stat.slower {
+    background-color: rgba(255, 123, 123, 0.1);
+    border-color: rgba(255, 123, 123, 0.3);
+}
+
+.time-stat.session-stat.slower .time-stat-label,
+.time-stat.session-stat.slower .time-stat-value {
+    color: #FF7B7B;
+}
+
+.time-stat.session-stat.exact {
+    background-color: rgba(127, 219, 218, 0.1);
+    border-color: rgba(127, 219, 218, 0.3);
+}
+
+.time-stat.session-stat.exact .time-stat-label,
+.time-stat.session-stat.exact .time-stat-value {
+    color: #7FDBDA;
 }
 
 .view-switch-btn {
@@ -676,6 +852,139 @@ body {
 .kanban-column.drag-over-column {
     background-color: #252525;
     border-color: #555;
+}
+
+/* Plan View */
+.plan-view {
+    flex: 1;
+    overflow: hidden;
+    background-color: #0f0f0f;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.plan-editor-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 20px;
+    padding-bottom: 20px;
+}
+
+.plan-editor {
+    width: 80%;
+    max-width: 900px;
+    height: calc(100vh - 240px);
+    max-height: calc(100vh - 240px);
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #e0e0e0;
+    font-family: 'Courier New', 'Courier', monospace;
+    font-size: 18px;
+    line-height: 1.8;
+    padding: 40px 0;
+    overflow-y: auto;
+    caret-color: #e0e0e0;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    scroll-padding-top: 40px;
+    scroll-padding-bottom: 40px;
+}
+
+.plan-editor:empty::before {
+    content: attr(data-placeholder);
+    color: #444;
+    font-style: italic;
+    white-space: pre-wrap;
+}
+
+.plan-editor:focus {
+    outline: none;
+}
+
+/* Markdown styling in plan editor */
+.plan-editor strong,
+.plan-editor b {
+    font-weight: 700;
+    color: #fff;
+}
+
+.plan-editor em,
+.plan-editor i {
+    font-style: italic;
+    color: #ccc;
+}
+
+.plan-editor ul {
+    margin: 0;
+    padding-left: 20px;
+    list-style-type: disc;
+}
+
+.plan-editor li {
+    margin: 4px 0;
+}
+
+.plan-editor .task-checkbox {
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border: 1px solid #666;
+    border-radius: 3px;
+    background-color: transparent;
+    cursor: pointer;
+    margin-right: 8px;
+    vertical-align: middle;
+    position: relative;
+    top: -1px;
+}
+
+.plan-editor .task-checkbox:checked {
+    background-color: #2ecc71;
+    border-color: #2ecc71;
+}
+
+.plan-editor .task-checkbox:checked::after {
+    content: '✓';
+    position: absolute;
+    top: -2px;
+    left: 2px;
+    font-size: 12px;
+    color: #0f0f0f;
+    font-weight: bold;
+}
+
+.plan-editor .task-item {
+    display: block;
+    margin: 4px 0;
+}
+
+.plan-editor .task-item.completed {
+    text-decoration: line-through;
+    opacity: 0.6;
+}
+
+/* Scrollbar for plan editor */
+.plan-editor::-webkit-scrollbar {
+    width: 8px;
+}
+
+.plan-editor::-webkit-scrollbar-track {
+    background: #0f0f0f;
+}
+
+.plan-editor::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 4px;
+}
+
+.plan-editor::-webkit-scrollbar-thumb:hover {
+    background: #444;
 }
 
 .welcome-message {

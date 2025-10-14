@@ -32,8 +32,10 @@ simplenotesapp/
     timestamp: String,       // ISO-Format Erstellungszeit
     completed: Boolean,      // Immer false (wird gelöscht statt completed)
     stackId: Number|null,    // ID des Stacks oder null
-    category: String|null,   // 'k', 'h', 'p' oder null
+    category: String|null,   // 'k', 'h', 'p', 'u' oder null
+    uClass: String|null,     // Klassen-Tag für 'u': '2a', '2b', '2c', '3a', '3b', '5'
     timeMinutes: Number|null,// Zeitangabe in Minuten
+    priority: String|null,   // '!', '!!', oder '!!!' für Prioritäten
     focused: Boolean,        // Scharfgestellt für aktive Aufgaben
     assignedDay: String|null // 'monday' - 'sunday' oder null für Kanban
 }
@@ -51,7 +53,258 @@ simplenotesapp/
 
 ## Haupt-Features
 
-### 1. Karten bearbeiten (NEU)
+### 1. Plan View - Minimalistisches Notepad (NEUESTES!)
+
+Ein typewriter-inspirierter Editor für Tagesplanung mit automatischer Task-Erstellung.
+
+**UI/UX**:
+- Vollbild schwarzer Hintergrund
+- Zentrierter contenteditable Editor (80% Breite, max 900px)
+- Courier New Schriftart, 18px, Zeilenhöhe 1.8
+- Blinkender Cursor
+- Scroll-Padding (40px) verhindert Überlappung mit Header/Footer
+
+**Live Markdown Rendering**:
+- **Cmd+B**: Macht Text **fett** (via `document.execCommand('bold')`)
+- **Cmd+I**: Macht Text *kursiv* (via `document.execCommand('italic')`)
+- **Cmd+Shift+8**: Bullet-Liste (via `document.execCommand('insertUnorderedList')`)
+- **Cmd+Shift+C**: Interaktive Checkbox einfügen
+- Checkboxen sind klickbare HTML-Elemente (nicht Markdown-Syntax)
+
+**Automatische Task-Erstellung**:
+- Pattern: `(Task-Name 30m --k !!)`
+- Regex: `/\(([^)]+?)\)/g`
+- Parsing-Reihenfolge:
+  1. Kategorie: `--u2a` (mit Klasse) oder `--k/h/p`
+  2. Priorität: `!`, `!!`, `!!!`
+  3. Zeit: `\d+m`
+- Nach Erstellung: `()` wird zu grünem `[...] ✓`
+- Cursor bewegt sich automatisch aus dem grünen Span
+
+**Implementierung** (app.js:2630-2803):
+```javascript
+handlePlanInput() {
+    const text = this.getPlainText(); // Extrahiert Plain-Text aus HTML
+    const taskPattern = /\(([^)]+?)\)/g;
+    const matches = [...text.matchAll(taskPattern)];
+
+    matches.forEach(match => {
+        // Parse category, priority, time
+        // Create note object
+        // Replace () with green [✓]
+        // Move cursor outside green span
+    });
+}
+
+getPlainText() {
+    // Clone editor
+    // Replace checkboxes with markdown: [ ] oder [x]
+    // Return textContent
+}
+
+insertCheckbox() {
+    // Creates HTML: <span class="task-item"><input type="checkbox" class="task-checkbox"></span>
+    // Inserts at cursor position
+}
+```
+
+**Persistenz**:
+- localStorage Key: `'planText'`
+- Speichert: `this.planEditor.innerHTML` (als HTML, nicht Plain-Text!)
+- Lädt beim Init via `loadPlanText()`
+
+**CSS-Besonderheiten** (style.css:857-966):
+```css
+.plan-editor {
+    contenteditable: true;
+    height: calc(100vh - 240px);
+    padding: 40px 0;
+    scroll-padding-top/bottom: 40px;
+}
+
+.plan-editor strong { font-weight: 700; color: #fff; }
+.plan-editor em { font-style: italic; color: #ccc; }
+.plan-editor ul { padding-left: 20px; list-style-type: disc; }
+
+.task-checkbox {
+    appearance: none;
+    width: 16px; height: 16px;
+    border: 1px solid #666;
+    border-radius: 3px;
+}
+
+.task-checkbox:checked {
+    background-color: #2ecc71;
+}
+```
+
+**View-Switching**:
+- Button-Zyklus: Board (⊟) → Kanban (✎) → Plan (⊞) → Board
+- Bei Wechsel zu Plan: `setTimeout(() => this.planEditor.focus(), 100)`
+
+### 2. Session-Statistik & Zeiterfassung (NEU!)
+
+**Session Statistics** im Header:
+- Nach Beenden einer Work-Session werden Zeitdaten im localStorage gespeichert
+- Key: `'lastSessionData'`
+- Struktur: `{ plannedMinutes, actualMinutes, differenceMinutes, timestamp }`
+
+**Anzeige im Header**:
+- **Gespart: +15m** (grün) wenn schneller
+- **Mehr: -10m** (rot) wenn langsamer
+- **Genau: ±0m** (türkis) wenn exakt
+- CSS-Klassen: `.time-stat.session-stat.faster/slower/exact`
+
+**Implementierung** (app.js:512-575, 1640-1660):
+```javascript
+showSessionSummary(timerRanOut) {
+    // Calculate elapsed time
+    const sessionData = {
+        plannedMinutes,
+        actualMinutes,
+        differenceMinutes,
+        timestamp: Date.now()
+    };
+    localStorage.setItem('lastSessionData', JSON.stringify(sessionData));
+    this.updateTimeStats(); // Re-renders header
+}
+
+updateTimeStats() {
+    // ... normal stats ...
+    const sessionDataStr = localStorage.getItem('lastSessionData');
+    if (sessionDataStr) {
+        const data = JSON.parse(sessionDataStr);
+        if (data.differenceMinutes > 0) {
+            html += `<div class="time-stat session-stat faster">...`;
+        }
+    }
+}
+```
+
+**Fix: updateWorkSidebar**:
+- Problem: Stoppt automatisch Timer wenn keine fokussierten Tasks
+- Lösung: Kommentar hinzugefügt, `stopWork()` entfernt
+- Jetzt übernimmt `recalculateTimer()` die Steuerung
+
+### 3. Prioritäten-System (NEU!)
+
+**Syntax**: `!`, `!!`, `!!!`
+
+**Parsing** (addNote & handlePlanInput):
+```javascript
+const priorityMatch = content.match(/(!{1,3})/);
+if (priorityMatch) {
+    priority = priorityMatch[1]; // WICHTIG: Als String speichern!
+    content = content.replace(/!{1,3}/, '').trim();
+}
+```
+
+**Rendering**:
+```javascript
+if (note.priority) {
+    const priorityDisplay = document.createElement('span');
+    priorityDisplay.className = 'note-priority';
+    priorityDisplay.textContent = note.priority; // '!', '!!', oder '!!!'
+    leftActions.appendChild(priorityDisplay);
+}
+```
+
+**CSS**:
+```css
+.note-priority {
+    color: #ff4444;
+    font-weight: bold;
+    margin-left: 6px;
+}
+```
+
+**Bug-Fix**: Im Plan-Modus wurde Priorität als Zahl gespeichert → jetzt als String
+
+### 4. Unterrichts-Kategorie mit Klassen-Tags (NEU!)
+
+**Syntax**: `--u2a`, `--u2b`, `--u2c`, `--u3a`, `--u3b`, `--u5`
+
+**Parsing** (addNote):
+```javascript
+const uCategoryMatch = content.match(/--u(2a|2b|2c|3a|3b|5)$/);
+if (uCategoryMatch) {
+    category = 'u';
+    uClass = uCategoryMatch[1]; // '2a', '2b', etc.
+    content = content.replace(/\s*--u(2a|2b|2c|3a|3b|5)$/, '').trim();
+}
+```
+
+**Rendering**:
+```javascript
+if (note.category === 'u' && note.uClass) {
+    const classBadge = document.createElement('span');
+    classBadge.className = 'class-badge';
+    classBadge.textContent = note.uClass; // '2a', '3b', etc.
+    classBadge.style.backgroundColor = '#B19CD9';
+    centerActions.appendChild(classBadge);
+}
+```
+
+**Filter-Integration**:
+- Filter-Buttons: `filterClass2a`, `filterClass2b`, etc.
+- Filter-Keys: `'class-2a'`, `'class-2b'`, etc.
+- Matching: `return note.category === 'u' && note.uClass === cls;`
+
+### 5. Completed Counter (NEU!)
+
+**Funktion**: Zählt erledigte Tasks pro Tag
+
+**Properties**:
+```javascript
+this.completedToday = 0;
+this.lastResetDate = null;
+this.completedCounterElement = document.getElementById('completedCounter');
+```
+
+**Persistenz**:
+```javascript
+saveCompletedCounter() {
+    const data = {
+        count: this.completedToday,
+        date: new Date().toDateString()
+    };
+    localStorage.setItem('completedCounter', JSON.stringify(data));
+}
+
+loadCompletedCounter() {
+    const saved = localStorage.getItem('completedCounter');
+    if (saved) {
+        const data = JSON.parse(saved);
+        this.completedToday = data.count;
+        this.lastResetDate = data.date;
+    }
+}
+```
+
+**Auto-Reset bei Mitternacht**:
+```javascript
+checkAndResetCounter() {
+    const today = new Date().toDateString();
+    if (this.lastResetDate && this.lastResetDate !== today) {
+        this.completedToday = 0;
+        this.saveCompletedCounter();
+    }
+}
+```
+
+**Increment nur bei Complete**:
+```javascript
+toggleComplete(id) {
+    // ...
+    this.completedToday++;
+    this.saveCompletedCounter();
+    this.updateCompletedCounter();
+}
+```
+
+**Nicht** bei Delete!
+
+### 6. Karten bearbeiten
 Bestehende Karten können bearbeitet werden:
 
 **UI**:
@@ -630,6 +883,14 @@ Dieses Projekt wurde vollständig mit **Claude Code** entwickelt - einem AI-powe
 - **Button-Klicks vor Drag schützen**: `e.preventDefault()` + `draggable=false` auf Buttons
 - **IndexedDB für komplexe Daten**: File-Handles brauchen strukturierte Speicherung
 - **Tab-Key problematisch**: Dedicated Button besser als Tab-Switching bei vielen interaktiven Elementen
+- **ContentEditable für Rich Text**: Native `document.execCommand()` für Bold/Italic besser als Markdown-Parsing
+- **HTML-Storage statt Plain-Text**: Plan-Editor speichert innerHTML, nicht textContent, um Formatierung zu bewahren
+- **Cursor-Management wichtig**: Nach Auto-Task-Erstellung Cursor aus grünem Span bewegen, sonst schreibt User grün weiter
+- **Scroll-Padding notwendig**: `scroll-padding-top/bottom` verhindert, dass Text unter Header/Footer verschwindet
+- **Priorität als String speichern**: `'!!'` nicht als Zahl, sonst wird es zu "2" gerendert
+- **updateWorkSidebar-Bug**: Nicht automatisch Timer stoppen, sonst race condition mit `recalculateTimer()`
+- **Session-Stats persistent**: localStorage macht Stats sichtbar auch wenn Sidebar geschlossen
+- **--u Parsing vor anderen Kategorien**: `--u2a` muss vor `--k/h/p` geparst werden, um Klasse zu erkennen
 
 ## Kontakt & Beiträge
 

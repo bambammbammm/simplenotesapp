@@ -5,6 +5,8 @@ class NotesApp {
         this.noteInput = document.getElementById('noteInput');
         this.notesCanvas = document.getElementById('notesCanvas');
         this.kanbanView = document.getElementById('kanbanView');
+        this.planView = document.getElementById('planView');
+        this.planEditor = document.getElementById('planEditor');
         this.welcomeMessage = document.getElementById('welcomeMessage');
         this.noteCountElement = document.querySelector('.note-count');
         this.timeStatsElement = document.getElementById('timeStats');
@@ -16,8 +18,9 @@ class NotesApp {
         this.draggedCard = null;
         this.draggedStack = null;
         this.currentStackId = null;
-        this.currentView = 'board'; // 'board' oder 'kanban'
+        this.currentView = 'board'; // 'board', 'kanban' or 'plan'
         this.viewSwitchBtn = document.getElementById('viewSwitchBtn');
+        this.planText = ''; // Store plan text
         this.unassignedCollapsed = false; // State for collapsed unassigned column
         this.collapseUnassignedBtn = document.getElementById('collapseUnassignedBtn');
 
@@ -30,16 +33,26 @@ class NotesApp {
         this.workTimeTotal = document.getElementById('workTimeTotal');
         this.workTimer = document.getElementById('workTimer');
         this.timerDisplay = document.getElementById('timerDisplay');
+        this.endTimeDisplay = document.getElementById('endTimeDisplay');
+        this.endTimeValue = document.getElementById('endTimeValue');
         this.startWorkBtn = document.getElementById('startWorkBtn');
         this.pauseBtn = document.getElementById('pauseBtn');
         this.stopBtn = document.getElementById('stopBtn');
+        this.sessionSummary = document.getElementById('sessionSummary');
+        this.sessionSummaryClose = document.getElementById('sessionSummaryClose');
+        this.sessionPlanned = document.getElementById('sessionPlanned');
+        this.sessionActual = document.getElementById('sessionActual');
+        this.sessionDifference = document.getElementById('sessionDifference');
 
         this.timerState = {
             isRunning: false,
             isPaused: false,
             totalSeconds: 0,
             remainingSeconds: 0,
-            intervalId: null
+            intervalId: null,
+            startTime: null,
+            endTime: null,
+            initialPlannedMinutes: 0
         };
 
         // Filters
@@ -97,6 +110,7 @@ class NotesApp {
         this.loadNotes();
         this.loadCompletedCounter();
         this.loadKanbanSettings();
+        this.loadPlanText();
         this.checkAndResetCounter();
 
         // Event listeners
@@ -112,6 +126,19 @@ class NotesApp {
 
         // View switching button
         this.viewSwitchBtn.addEventListener('click', () => this.switchView());
+
+        // Plan editor event listeners
+        this.planEditor.addEventListener('input', () => this.handlePlanInput());
+        this.planEditor.addEventListener('blur', () => this.savePlanText());
+        this.planEditor.addEventListener('keydown', (e) => this.handlePlanKeyDown(e));
+
+        // Checkbox click handler
+        this.planEditor.addEventListener('click', (e) => {
+            if (e.target.classList.contains('task-checkbox')) {
+                e.target.checked = !e.target.checked;
+                this.savePlanText();
+            }
+        });
 
         // Collapse unassigned column button
         this.collapseUnassignedBtn.addEventListener('click', () => this.toggleUnassignedCollapse());
@@ -149,6 +176,7 @@ class NotesApp {
         this.startWorkBtn.addEventListener('click', () => this.startWork());
         this.pauseBtn.addEventListener('click', () => this.togglePause());
         this.stopBtn.addEventListener('click', () => this.stopWork());
+        this.sessionSummaryClose.addEventListener('click', () => this.closeSessionSummary());
 
         // Filter event listeners
         Object.values(this.filterButtons).forEach(btn => {
@@ -266,6 +294,10 @@ class NotesApp {
     toggleComplete(id) {
         const note = this.notes.find(n => n.id === id);
         if (note) {
+            // Check if this note was focused and timer is running
+            const wasFocused = note.focused === true;
+            const timerWasRunning = this.timerState.isRunning;
+
             // Save state for undo BEFORE making changes
             this.saveStateForUndo();
 
@@ -292,6 +324,11 @@ class NotesApp {
                     this.saveNotes();
                     this.saveStacks();
                     this.render();
+
+                    // Recalculate timer if it was running and note was focused
+                    if (timerWasRunning && wasFocused) {
+                        this.recalculateTimer();
+                    }
                 }, 300);
             }
         }
@@ -335,12 +372,16 @@ class NotesApp {
                 this.workTimeTotal.textContent = `${totalMinutes}m`;
             }
         } else {
-            // Hide sidebar if no focused notes
-            this.workSidebar.style.display = 'none';
-            // Stop timer if running
-            if (this.timerState.isRunning) {
-                this.stopWork();
+            // Check if session summary is visible - if so, keep sidebar open
+            const sessionSummaryVisible = this.sessionSummary.style.display !== 'none';
+
+            if (!sessionSummaryVisible) {
+                // Hide sidebar if no focused notes and no summary shown
+                this.workSidebar.style.display = 'none';
             }
+
+            // DON'T stop timer here - let recalculateTimer() handle it
+            // The timer will be stopped by recalculateTimer() or showSessionSummary()
         }
     }
 
@@ -352,16 +393,27 @@ class NotesApp {
             return;
         }
 
-        // Initialize timer
+        // Initialize timer with start and end time
+        const now = new Date();
         this.timerState.isRunning = true;
         this.timerState.isPaused = false;
         this.timerState.totalSeconds = totalMinutes * 60;
         this.timerState.remainingSeconds = totalMinutes * 60;
+        this.timerState.startTime = now;
+        this.timerState.endTime = new Date(now.getTime() + totalMinutes * 60 * 1000);
+        this.timerState.initialPlannedMinutes = totalMinutes; // Save initial planned time
+
+        // Hide session summary if still visible
+        this.sessionSummary.style.display = 'none';
 
         // Update UI
         this.startWorkBtn.style.display = 'none';
         this.workTimer.style.display = 'block';
         this.pauseBtn.textContent = '‖ Pause';
+
+        // Show and update end time display
+        this.endTimeDisplay.style.display = 'flex';
+        this.updateEndTimeDisplay();
 
         // Start countdown
         this.timerState.intervalId = setInterval(() => {
@@ -369,9 +421,8 @@ class NotesApp {
                 this.timerState.remainingSeconds--;
 
                 if (this.timerState.remainingSeconds <= 0) {
-                    // Timer finished
-                    this.stopWork();
-                    alert('🎉 Arbeitszeit abgelaufen! Gut gemacht!');
+                    // Timer finished naturally
+                    this.showSessionSummary(true);
                 } else {
                     this.updateTimerDisplay();
                 }
@@ -404,10 +455,13 @@ class NotesApp {
         this.timerState.isRunning = false;
         this.timerState.isPaused = false;
         this.timerState.remainingSeconds = 0;
+        this.timerState.startTime = null;
+        this.timerState.endTime = null;
 
         // Update UI
         this.startWorkBtn.style.display = 'block';
         this.workTimer.style.display = 'none';
+        this.endTimeDisplay.style.display = 'none';
         this.timerDisplay.textContent = '00:00:00';
     }
 
@@ -423,6 +477,124 @@ class NotesApp {
         ].join(':');
 
         this.timerDisplay.textContent = formatted;
+    }
+
+    updateEndTimeDisplay() {
+        if (!this.timerState.endTime) return;
+
+        const hours = this.timerState.endTime.getHours();
+        const minutes = this.timerState.endTime.getMinutes();
+
+        const formatted = [
+            hours.toString().padStart(2, '0'),
+            minutes.toString().padStart(2, '0')
+        ].join(':');
+
+        this.endTimeValue.textContent = formatted;
+    }
+
+    recalculateTimer() {
+        if (!this.timerState.isRunning) {
+            return;
+        }
+
+        // Calculate new total time from remaining focused tasks
+        const newTotalMinutes = this.calculateFocusedTime();
+
+        if (newTotalMinutes === 0) {
+            // No more focused tasks, show session summary
+            this.showSessionSummary(false);
+            return;
+        }
+
+        // Calculate new end time based on current time + remaining work
+        const now = new Date();
+        this.timerState.totalSeconds = newTotalMinutes * 60;
+        this.timerState.remainingSeconds = newTotalMinutes * 60;
+        this.timerState.endTime = new Date(now.getTime() + newTotalMinutes * 60 * 1000);
+
+        // Update displays
+        this.updateTimerDisplay();
+        this.updateEndTimeDisplay();
+    }
+
+    showSessionSummary(timerRanOut) {
+        // Calculate actual time elapsed
+        const now = new Date();
+        const elapsedMs = now.getTime() - this.timerState.startTime.getTime();
+        const actualMinutes = Math.round(elapsedMs / 60000);
+
+        const plannedMinutes = this.timerState.initialPlannedMinutes;
+        const differenceMinutes = plannedMinutes - actualMinutes;
+
+        // Save session data to localStorage
+        const sessionData = {
+            plannedMinutes,
+            actualMinutes,
+            differenceMinutes,
+            timestamp: Date.now()
+        };
+        localStorage.setItem('lastSessionData', JSON.stringify(sessionData));
+
+        // Clear interval and reset timer state
+        if (this.timerState.intervalId) {
+            clearInterval(this.timerState.intervalId);
+            this.timerState.intervalId = null;
+        }
+
+        this.timerState.isRunning = false;
+        this.timerState.isPaused = false;
+        this.timerState.remainingSeconds = 0;
+
+        // Hide timer, show start button, but keep sidebar visible
+        this.workTimer.style.display = 'none';
+        this.endTimeDisplay.style.display = 'none';
+        this.startWorkBtn.style.display = 'block';
+        this.workSidebar.style.display = 'flex'; // Ensure sidebar stays visible
+
+        // Update summary content
+        this.sessionPlanned.textContent = `${plannedMinutes}m`;
+        this.sessionActual.textContent = `${actualMinutes}m`;
+
+        // Clear previous classes
+        this.sessionDifference.className = 'session-difference';
+
+        if (differenceMinutes > 0) {
+            // Faster than planned
+            this.sessionDifference.classList.add('faster');
+            this.sessionDifference.textContent = `${differenceMinutes}m schneller! 🎉`;
+        } else if (differenceMinutes < 0) {
+            // Slower than planned
+            this.sessionDifference.classList.add('slower');
+            this.sessionDifference.textContent = `${Math.abs(differenceMinutes)}m länger gebraucht`;
+        } else {
+            // Exact
+            this.sessionDifference.classList.add('exact');
+            this.sessionDifference.textContent = 'Genau nach Plan! 👌';
+        }
+
+        // Show summary
+        this.sessionSummary.style.display = 'block';
+
+        // Update header display
+        this.updateTimeStats();
+
+        // Show alert based on how session ended
+        if (timerRanOut) {
+            setTimeout(() => alert('🎉 Arbeitszeit abgelaufen!'), 100);
+        } else {
+            setTimeout(() => alert('✅ Alle fokussierten Aufgaben erledigt!'), 100);
+        }
+    }
+
+    closeSessionSummary() {
+        this.sessionSummary.style.display = 'none';
+
+        // Hide sidebar if no focused notes left
+        const focusedNotes = this.getFocusedNotes();
+        if (focusedNotes.length === 0) {
+            this.workSidebar.style.display = 'none';
+        }
     }
 
     // ========== Filters ==========
@@ -1001,16 +1173,33 @@ class NotesApp {
     }
 
     switchView() {
-        this.currentView = this.currentView === 'board' ? 'kanban' : 'board';
+        // Cycle through: board → kanban → plan → board
+        if (this.currentView === 'board') {
+            this.currentView = 'kanban';
+        } else if (this.currentView === 'kanban') {
+            this.currentView = 'plan';
+        } else {
+            this.currentView = 'board';
+        }
 
+        // Hide all views
+        this.notesCanvas.style.display = 'none';
+        this.kanbanView.style.display = 'none';
+        this.planView.style.display = 'none';
+
+        // Show current view and update button
         if (this.currentView === 'kanban') {
-            this.notesCanvas.style.display = 'none';
             this.kanbanView.style.display = 'flex';
+            this.viewSwitchBtn.querySelector('.view-icon').textContent = '✎';
+            this.viewSwitchBtn.querySelector('.view-label').textContent = 'Plan';
+        } else if (this.currentView === 'plan') {
+            this.planView.style.display = 'flex';
             this.viewSwitchBtn.querySelector('.view-icon').textContent = '⊟';
             this.viewSwitchBtn.querySelector('.view-label').textContent = 'Board';
+            // Focus on plan editor when switching to plan view
+            setTimeout(() => this.planEditor.focus(), 100);
         } else {
             this.notesCanvas.style.display = 'grid';
-            this.kanbanView.style.display = 'none';
             this.viewSwitchBtn.querySelector('.view-icon').textContent = '⊞';
             this.viewSwitchBtn.querySelector('.view-label').textContent = 'Kanban';
         }
@@ -1455,6 +1644,28 @@ class NotesApp {
 
         if (stats.total > 0) {
             html += `<div class="time-stat"><span class="time-stat-label">total:</span><span class="time-stat-value">${stats.total}m</span></div>`;
+        }
+
+        // Load and display session data
+        const sessionDataStr = localStorage.getItem('lastSessionData');
+        if (sessionDataStr) {
+            try {
+                const sessionData = JSON.parse(sessionDataStr);
+                const differenceMinutes = sessionData.differenceMinutes;
+
+                if (differenceMinutes > 0) {
+                    // Faster than planned - green
+                    html += `<div class="time-stat session-stat faster"><span class="time-stat-label">Gespart:</span><span class="time-stat-value">+${differenceMinutes}m</span></div>`;
+                } else if (differenceMinutes < 0) {
+                    // Slower than planned - red
+                    html += `<div class="time-stat session-stat slower"><span class="time-stat-label">Mehr:</span><span class="time-stat-value">${differenceMinutes}m</span></div>`;
+                } else {
+                    // Exact - blue
+                    html += `<div class="time-stat session-stat exact"><span class="time-stat-label">Genau:</span><span class="time-stat-value">±0m</span></div>`;
+                }
+            } catch (e) {
+                console.error('Error loading session data:', e);
+            }
         }
 
         this.timeStatsElement.innerHTML = html;
@@ -2421,6 +2632,183 @@ class NotesApp {
             }, 500);
         } else {
             this.backupStatusElement.style.color = '#888';
+        }
+    }
+
+    // ========== Plan View ==========
+
+    handlePlanKeyDown(e) {
+        const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+        const cmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
+
+        // Bold: Cmd/Ctrl + B
+        if (cmdOrCtrl && e.key === 'b') {
+            e.preventDefault();
+            document.execCommand('bold', false, null);
+            return;
+        }
+
+        // Italic: Cmd/Ctrl + I
+        if (cmdOrCtrl && e.key === 'i') {
+            e.preventDefault();
+            document.execCommand('italic', false, null);
+            return;
+        }
+
+        // Bullet list: Cmd/Ctrl + Shift + 8
+        if (cmdOrCtrl && e.shiftKey && e.key === '8') {
+            e.preventDefault();
+            document.execCommand('insertUnorderedList', false, null);
+            return;
+        }
+
+        // Checkbox: Cmd/Ctrl + Shift + C
+        if (cmdOrCtrl && e.shiftKey && (e.key === 'c' || e.key === 'C')) {
+            e.preventDefault();
+            this.insertCheckbox();
+            return;
+        }
+    }
+
+    insertCheckbox() {
+        const selection = window.getSelection();
+        const range = selection.getRangeAt(0);
+
+        // Create checkbox HTML
+        const span = document.createElement('span');
+        span.className = 'task-item';
+        span.innerHTML = '<input type="checkbox" class="task-checkbox"> ';
+
+        range.insertNode(span);
+        range.collapse(false);
+
+        this.savePlanText();
+    }
+
+    getPlainText() {
+        // Extract plain text from HTML, preserving structure
+        const clone = this.planEditor.cloneNode(true);
+
+        // Replace checkboxes with markdown syntax
+        const checkboxes = clone.querySelectorAll('.task-checkbox');
+        checkboxes.forEach(cb => {
+            const marker = cb.checked ? '[x]' : '[ ]';
+            cb.replaceWith(`- ${marker} `);
+        });
+
+        return clone.textContent || clone.innerText || '';
+    }
+
+    handlePlanInput() {
+        // Get plain text for task parsing
+        const text = this.getPlainText();
+
+        // Parse for task patterns: (task content time category)
+        // Examples: (Meeting vorbereiten 30m --k), (Einkaufen 15m --p)
+        const taskPattern = /\(([^)]+?)\)/g;
+        const matches = [...text.matchAll(taskPattern)];
+
+        if (matches.length > 0) {
+            matches.forEach(match => {
+                const fullMatch = match[0];
+                const innerContent = match[1].trim();
+
+                // Check if this pattern hasn't been processed yet
+                // We mark processed patterns by replacing () with []
+                if (!text.includes(`[${innerContent}]`)) {
+                    // Parse the content using the same logic as addNote()
+                    let content = innerContent;
+                    let category = null;
+                    let uClass = null;
+                    let timeMinutes = null;
+                    let priority = null;
+
+                    // Extract category - check for --u with class first
+                    const uCategoryMatch = content.match(/--u(2a|2b|2c|3a|3b|5)/);
+                    if (uCategoryMatch) {
+                        category = 'u';
+                        uClass = uCategoryMatch[1];
+                        content = content.replace(/--u(2a|2b|2c|3a|3b|5)/, '').trim();
+                    } else {
+                        // Then check for other categories
+                        const categoryMatch = content.match(/--([khp])/);
+                        if (categoryMatch) {
+                            category = categoryMatch[1];
+                            content = content.replace(/--[khp]/, '').trim();
+                        }
+                    }
+
+                    // Extract priority (!, !!, !!!)
+                    const priorityMatch = content.match(/(!{1,3})/);
+                    if (priorityMatch) {
+                        priority = priorityMatch[1]; // Store as string: '!', '!!', or '!!!'
+                        content = content.replace(/!{1,3}/, '').trim();
+                    }
+
+                    // Extract time (e.g., "30m")
+                    const timeMatch = content.match(/(\d+)m/);
+                    if (timeMatch) {
+                        timeMinutes = parseInt(timeMatch[1]);
+                        content = content.replace(/\d+m/, '').trim();
+                    }
+
+                    // Clean up extra whitespace
+                    content = content.replace(/\s+/g, ' ').trim();
+
+                    if (content) {
+                        // Create the note
+                        const note = {
+                            id: Date.now() + Math.random(), // Make it unique
+                            content: content,
+                            timestamp: new Date().toISOString(),
+                            completed: false,
+                            stackId: null,
+                            category: category,
+                            uClass: uClass,
+                            timeMinutes: timeMinutes,
+                            focused: false,
+                            assignedDay: null,
+                            priority: priority
+                        };
+
+                        this.notes.push(note);
+                        this.saveNotes();
+                        this.render();
+
+                        // Replace () with [] to mark as processed in HTML
+                        const currentHTML = this.planEditor.innerHTML;
+                        const escapedMatch = fullMatch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                        const newHTML = currentHTML.replace(new RegExp(escapedMatch), `<span style="color: #2ecc71;">[${innerContent}] ✓</span>&nbsp;`);
+                        this.planEditor.innerHTML = newHTML;
+
+                        // Move cursor outside the green span
+                        const selection = window.getSelection();
+                        const range = document.createRange();
+                        range.selectNodeContents(this.planEditor);
+                        range.collapse(false); // Collapse to end
+                        selection.removeAllRanges();
+                        selection.addRange(range);
+
+                        this.savePlanText();
+
+                        console.log('Task created from plan:', note);
+                    }
+                }
+            });
+        }
+
+        // Auto-save
+        this.savePlanText();
+    }
+
+    savePlanText() {
+        localStorage.setItem('planText', this.planEditor.innerHTML);
+    }
+
+    loadPlanText() {
+        const saved = localStorage.getItem('planText');
+        if (saved) {
+            this.planEditor.innerHTML = saved;
         }
     }
 

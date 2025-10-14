@@ -9,24 +9,85 @@ A minimalist, terminal-inspired notes and todo management application with advan
 - **Card-Based Display**: Notes appear as draggable cards on a canvas
 - **Persistent Storage**: All notes are automatically saved to browser localStorage
 - **Fade Animations**: Smooth animations when creating or removing cards
+- **Three Views**: Board, Kanban, and Plan view for different workflows
 
 ### Advanced Features
 
+#### 📝 Plan View (New!)
+Minimalist typewriter-style notepad for planning with automatic task creation:
+- **Clean Writing Space**: Distraction-free, centered editor with Courier font
+- **Live Markdown Rendering**: Bold, italic, bullet lists, and checkboxes render as you type
+- **Keyboard Shortcuts**:
+  - `Cmd+B` → **Bold text**
+  - `Cmd+I` → *Italic text*
+  - `Cmd+Shift+8` → Bullet list
+  - `Cmd+Shift+C` → Checkbox
+- **Auto Task Creation**: Write `(Task name 30m --k)` and it automatically creates a card
+- **Visual Feedback**: Created tasks turn green with ✓ mark
+- **Persistent**: Content saves automatically to localStorage
+
+**Example Plan:**
+```
+**Today's Goals**
+
+- [ ] Morning routine
+- (Team meeting 30m --k)
+- [x] Email responses
+- (Code review 45m --k !!)
+
+*Notes:* Focus on high-priority items
+```
+
 #### 🎨 Color-Coded Categories
 Tag your notes with color categories:
-- `--k` → Turquoise border (e.g., critical tasks)
-- `--h` → Yellow border (e.g., high priority)
-- `--p` → Red border (e.g., projects)
+- `--k` → Turquoise border (KSWIL)
+- `--h` → Yellow border (HSLU)
+- `--p` → Pink border (Privat)
+- `--u` → Purple border (Unterricht/Teaching)
 
 **Example:** `Meeting preparation --k`
 
-#### ⏱️ Time Tracking
-Add time estimates to your notes:
+#### ⏱️ Time Tracking & Session Stats
+Add time estimates to your notes and track performance:
 - Format: `15m`, `30m`, `125m` (minutes)
 - Time displays in the card header
 - Automatic time summation in stacks
+- **Session Statistics**: After completing a work session, see time saved/used
+  - Green "Gespart: +15m" if faster than planned
+  - Red "Mehr: -10m" if slower than planned
+  - Displayed persistently in header
 
 **Example:** `Write documentation 60m --p`
+
+#### ⭐ Priority System
+Add priority levels to tasks:
+- `!` → Priority 1 (displayed as red !)
+- `!!` → Priority 2 (displayed as red !!)
+- `!!!` → Priority 3 (displayed as red !!!)
+- Filterable by priority level
+- Visual indicator next to time display
+
+**Example:** `Fix critical bug 30m --k !!!`
+
+#### 👨‍🏫 Teaching Category with Class Tags
+Special category for teaching tasks:
+- `--u2a`, `--u2b`, `--u2c` → Class 2a, 2b, 2c
+- `--u3a`, `--u3b` → Class 3a, 3b
+- `--u5` → Class 5
+- Purple card border
+- Class badge displayed on card
+- Filterable by class
+
+**Example:** `Mathe korrigieren 45m --u3a !!`
+
+#### ✅ Completed Counter
+Track your daily productivity:
+- Counter shows tasks completed today
+- Automatically resets at midnight
+- Displayed in bottom right
+- Only counts tasks marked with ○ (complete button)
+
+**Example:** "5 heute erledigt"
 
 #### 📚 Card Stacking
 - **Drag & Drop**: Drag one card onto another to create a stack
@@ -85,18 +146,27 @@ When you click on a stack badge, a modal opens with powerful management features
 
 The modal makes it easy to work with multiple related tasks grouped in a stack.
 
-### Kanban Week Planning
-Switch to Kanban view to plan your week:
+### Three-View System
+Switch between three different views:
 
-1. **Switch Views**: Click the **⊞ Kanban** button in the header
-2. **Drag Cards**: Drag cards from "Nicht zugewiesen" to a weekday
-3. **Move Stacks**: Entire stacks can be moved between days
-4. **View Time**: Each column shows total time for that day
-5. **Apply Filters**: Use time/category filters to focus on specific cards
-6. **Edit Cards**: All card actions work in Kanban view
-7. **Switch Back**: Click **⊟ Board** to return to board view
+1. **Board View** (⊟): Default grid view for daily work
+   - Cards displayed in grid layout
+   - Drag & drop to create stacks
+   - All filters available
 
-The Kanban view is perfect for weekly planning, while Board view is great for daily work.
+2. **Kanban View** (✎): Week planning with columns
+   - 8 columns: Unassigned + Monday-Sunday
+   - Drag cards between days
+   - Time totals per column
+   - Time/category filters (day filters hidden)
+
+3. **Plan View** (⊞): Minimalist writing space
+   - Typewriter-style editor
+   - Live Markdown rendering
+   - Auto task creation with `(task name 30m --k)`
+   - Perfect for planning and note-taking
+
+**Switching:** Click the view button in header (cycles through all three views)
 
 ### Time Management
 - Individual cards show their own time estimate
@@ -132,8 +202,16 @@ Inspired by terminal interfaces like Claude Code, the app features:
 
 ## Keyboard Shortcuts
 
+### Global
 - `Enter` - Save note (or save edit when editing)
 - `ESC` - Clear input field (or cancel edit when editing)
+- `Cmd/Ctrl+Z` - Undo last action
+
+### Plan View Only
+- `Cmd/Ctrl+B` - Make text **bold**
+- `Cmd/Ctrl+I` - Make text *italic*
+- `Cmd/Ctrl+Shift+8` - Insert bullet list
+- `Cmd/Ctrl+Shift+C` - Insert checkbox
 
 ## Installation
 
@@ -179,10 +257,27 @@ Read documentation 60m --p
 
 ## Recent Updates
 
-### 🗓️ Kanban Week View (New!)
+### 📝 Plan View with Live Markdown (Latest!)
+New minimalist writing mode for planning:
+- **Typewriter Interface**: Clean, centered editor with Courier font
+- **Live Markdown Rendering**: See bold, italic, lists as you type
+- **Keyboard Shortcuts**: Cmd+B for bold, Cmd+I for italic, etc.
+- **Auto Task Creation**: Write `(Task 30m --k)` to create cards instantly
+- **Persistent Storage**: Content auto-saves to localStorage
+- **Three-View Cycle**: Board → Kanban → Plan → Board
+
+### ⭐ Priority System & Session Stats (Latest!)
+Enhanced productivity tracking:
+- **Priority Levels**: Add !, !!, or !!! to tasks
+- **Session Statistics**: See time saved/used after work sessions
+- **Persistent Display**: Stats stay visible in header
+- **Teaching Category**: Special --u category with class tags (2a, 2b, etc.)
+- **Completed Counter**: Track tasks finished today
+
+### 🗓️ Kanban Week View
 Plan your week with a powerful Kanban board:
 - **8 Columns**: "Nicht zugewiesen" (unassigned) + Monday through Sunday
-- **View Switch Button**: Toggle between Board and Kanban view
+- **View Switch Button**: Cycle between Board, Kanban, and Plan
 - **Drag & Drop**: Move cards between days to schedule your week
 - **Stack Support**: Entire stacks can be moved between days
 - **Time Display**: Each column shows total time for that day
