@@ -892,6 +892,198 @@ Dieses Projekt wurde vollständig mit **Claude Code** entwickelt - einem AI-powe
 - **Session-Stats persistent**: localStorage macht Stats sichtbar auch wenn Sidebar geschlossen
 - **--u Parsing vor anderen Kategorien**: `--u2a` muss vor `--k/h/p` geparst werden, um Klasse zu erkennen
 
+## Zukünftige Features & Ideen
+
+### Priorisierte Feature-Liste
+
+#### 1. 📈 Statistics/Analytics Dashboard ⭐⭐⭐⭐⭐
+**Nutzen:** Visualisierung bereits getrackerter Daten (Zeit, Kategorien, erledigte Tasks)
+
+**Implementierung:**
+- Neuer View "Stats" (4. Ansicht im View-Cycle)
+- Visualisierungen:
+  - Zeit pro Kategorie diese Woche (Balkendiagramm)
+  - Erledigte Tasks pro Tag (Trend-Linie)
+  - Durchschnittliche Task-Zeit pro Kategorie
+  - Zeit-Verteilung nach Klassen (2a vs 2b vs 2c)
+  - Geplant vs. Tatsächlich über Zeit (Session Stats)
+- LocalStorage für historische Daten
+
+**Beispiel:**
+```
+KSWIL: 12h diese Woche (↑ 2h vs. letzte Woche)
+HSLU: 8h
+Unterricht: 15h
+  - 2a: 5h
+  - 2b: 4h
+  - 3a: 6h
+```
+
+#### 2. 📅 Deadlines/Fälligkeitsdaten ⭐⭐⭐⭐⭐
+**Nutzen:** Abgabetermine, Prüfungstermine tracking
+
+**Implementierung:**
+- Syntax: `Task 30m --k @2025-10-20` oder `@Fr` (nächster Freitag)
+- Visuelle Hinweise:
+  - Überfällig: roter Border
+  - Heute fällig: gelber Border
+  - Diese Woche: Datum-Badge
+- Kanban: Auto-assign basierend auf Deadline
+- Sortierung: Deadlines zuerst
+- Note-Property: `deadline: Date|null`
+
+#### 3. 🔁 Recurring Tasks ⭐⭐⭐⭐
+**Nutzen:** Wiederkehrende Aufgaben (Korrekturen, Meetings, Unterrichtsvorbereitung)
+
+**Implementierung:**
+- Syntax: `Task 60m --u2a @Mo,Mi,Fr` oder `@weekly`
+- Nach Complete: Automatisch neu erstellen für nächsten Termin
+- Note-Property: `recurring: String|null` (z.B. "weekly", "Mo,Mi,Fr")
+- Template-System: Neue Task aus bestehender klonen
+
+#### 4. 🔍 Search + Quick Filter ⭐⭐⭐⭐
+**Nutzen:** Tasks schnell finden bei vielen Einträgen
+
+**Implementierung:**
+- `Cmd+F` öffnet Suchfeld im Header
+- Live-Suche nach Content
+- Quick-Filter Syntax: `#mathe`, `@heute`, `!urgent`
+- Keyboard-Navigation: Pfeiltasten zum Springen
+- Highlight-Funktion für Suchergebnisse
+
+#### 5. 📝 Completed History ⭐⭐⭐
+**Nutzen:** Überblick über erledigte Tasks statt nur Counter
+
+**Implementierung:**
+- Klick auf "X heute erledigt" → Modal öffnet
+- Liste mit Timestamps
+- Wiederherstellungs-Option (Undo einzelner Task)
+- Zeiträume: Heute / Diese Woche / Letzte 7 Tage
+- LocalStorage: `completedHistory: Array<{note, completedAt}>`
+
+#### 6. ⌨️ Keyboard Shortcuts ⭐⭐⭐
+**Nutzen:** Effizienzsteigerung für Power-User
+
+**Vorgeschlagene Shortcuts:**
+```
+Cmd+N       → Neue Notiz (in aktuellem View)
+Cmd+K       → Quick Command Palette
+Cmd+1/2/3/4 → View wechseln (Board/Kanban/Plan/Stats)
+Cmd+F       → Search
+Cmd+,       → Settings
+Cmd+S       → Speichern (Plan View)
+/           → Quick Filter aktivieren
+ESC         → Clear filters/close modals
+```
+
+**Implementierung:**
+- Globaler Keydown-Listener mit Command-Registry
+- Visual Feedback (z.B. Command Palette Modal)
+- Shortcuts in Settings anzeigen
+
+#### 7. 🎨 Visual Improvements
+
+**Stack Titles in Board View:**
+- Momentan nur im Modal sichtbar
+- Kleine Badge oben auf Stack (diskret, nur bei Hover sichtbar)
+
+**Drag & Drop Preview:**
+- Ghost-Image beim Dragging
+- Drop-Zone highlighting mit Farbe
+- Smooth Animations
+
+**Sequential Stack Visual:**
+- Blocked Cards mehr ausgegraut (opacity: 0.4)
+- ⊠ Wasserzeichen prominenter
+- Klarere Unterscheidung zu Group Stacks
+
+#### 8. 📱 Mobile/Responsive ⭐⭐⭐
+**Nutzen:** Unterwegs Tasks checken und bearbeiten
+
+**Implementierung:**
+- Breakpoints: Desktop (>1024px), Tablet (768-1024px), Mobile (<768px)
+- Single-Column Layout auf Phone
+- Touch-friendly: Buttons mindestens 44x44px
+- Swipe Gestures:
+  - Swipe links → Delete
+  - Swipe rechts → Complete
+- Hamburger-Menu für Filter auf Mobile
+- Bottom-Sheet statt Modal auf Mobile
+
+#### 9. 🔗 Plan View: Note Linking
+**Nutzen:** Verknüpfung zwischen gespeicherten Notizen
+
+**Implementierung:**
+- Syntax: `[[Notiz-Name]]` im Text
+- Klickbare Links zu anderen Notizen
+- Backlinks-Anzeige (welche Notizen verlinken hierhin)
+- Graph-View (optional): Visualisierung der Verbindungen
+- Autocomplete beim Tippen `[[`
+
+#### 10. 💾 Better Backup/Export
+
+**CSV Export:**
+- Alle Tasks mit Zeit, Kategorie, Status, Timestamp
+- Für Excel-Auswertung
+- Button im Hamburger-Menü
+
+**iCal Export:**
+- Kanban-Tasks als Calendar Events
+- Importierbar in Google Calendar, Apple Calendar, Outlook
+
+**Import:**
+- CSV Import für Bulk-Task-Erstellung
+- Template-System: Vorlagen für wiederkehrende Workflows
+
+### Quick Wins (wenig Aufwand, hoher Nutzen)
+
+1. **Stack Title in Board View anzeigen** (2h)
+   - Badge oben auf Stack
+   - Nur bei Hover sichtbar
+   - CSS-only möglich
+
+2. **Keyboard Shortcuts** (4h)
+   - Cmd+1/2/3 für View-Wechsel
+   - Cmd+N für neue Notiz
+   - ESC für Modal/Filter schließen
+
+3. **Drag & Drop Visual Feedback** (2h)
+   - Drop-Zone highlighting
+   - Smooth ghost-image
+
+4. **Search (Basic)** (3h)
+   - Einfache Text-Suche im Header
+   - Filter notes nach content
+
+5. **Completed History Modal** (3h)
+   - Erweitert bestehenden Counter
+   - Liste mit Restore-Option
+
+### Technische Verbesserungen
+
+**Performance:**
+- Virtual Scrolling bei >100 Karten
+- Lazy Loading für Kanban-Spalten
+- Debouncing für Live-Search
+
+**Code-Struktur:**
+- Module System (ESM) einführen
+- Separate Dateien: `notes.js`, `stacks.js`, `ui.js`, `filters.js`
+- TypeScript Migration (optional)
+
+**Testing:**
+- Unit Tests für Core-Logik (Vitest)
+- E2E Tests für User-Flows (Playwright)
+- CI/CD Pipeline (GitHub Actions)
+
+**Accessibility:**
+- ARIA-Labels für alle interaktiven Elemente
+- Keyboard-Navigation überall
+- Screen-Reader Support
+- Focus-Management verbessern
+
+---
+
 ## Kontakt & Beiträge
 
 Dieses Projekt ist Open Source (MIT License). Feedback und Beiträge sind willkommen!

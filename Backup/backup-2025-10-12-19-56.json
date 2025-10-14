@@ -1,0 +1,27 @@
+{
+  "notes": [
+    {
+      "id": 1760291603045,
+      "content": "Alles einpacken für den ersten Schultag",
+      "timestamp": "2025-10-12T17:53:23.045Z",
+      "completed": false,
+      "stackId": null,
+      "category": "k",
+      "timeMinutes": 15,
+      "focused": false,
+      "assignedDay": null
+    }
+  ],
+  "stacks": [
+    {
+      "id": 1760211212861,
+      "noteIds": [
+        1760210802737,
+        1760210802539,
+        1760210805005
+      ]
+    }
+  ],
+  "timestamp": "2025-10-12T17:56:29.565Z",
+  "version": "1.0"
+}

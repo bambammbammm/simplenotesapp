@@ -1,0 +1,176 @@
+{
+  "notes": [
+    {
+      "id": 1760443757372,
+      "content": "Tattoofolie kaufen",
+      "timestamp": "2025-10-14T12:09:17.372Z",
+      "completed": false,
+      "stackId": null,
+      "category": "u",
+      "uClass": "5",
+      "priority": "!!",
+      "timeMinutes": 15,
+      "focused": false,
+      "assignedDay": null
+    },
+    {
+      "id": 1760442992283,
+      "content": "task",
+      "timestamp": "2025-10-14T11:56:32.283Z",
+      "completed": false,
+      "stackId": null,
+      "category": "h",
+      "uClass": null,
+      "priority": null,
+      "timeMinutes": 1,
+      "focused": false,
+      "assignedDay": null
+    },
+    {
+      "id": 1760425651881,
+      "content": "impfausweise zurückgeben heute",
+      "timestamp": "2025-10-14T07:07:31.881Z",
+      "completed": false,
+      "stackId": null,
+      "category": "u",
+      "uClass": "2a",
+      "priority": null,
+      "timeMinutes": null,
+      "focused": false,
+      "assignedDay": "tuesday"
+    },
+    {
+      "id": 1760425628647,
+      "content": "Kriterienübersicht in der Keynote und Ziel des Tages notieren.",
+      "timestamp": "2025-10-14T07:07:08.647Z",
+      "completed": false,
+      "stackId": null,
+      "category": "u",
+      "uClass": "5",
+      "priority": "!!",
+      "timeMinutes": 10,
+      "focused": false,
+      "assignedDay": "tuesday"
+    },
+    {
+      "id": 1760425160257,
+      "content": "Neues Feature in diesem Programm implementieren. Dass man einen Text als Briefing schreiben kann und Todos gleich extrahiert werden aus dem Text. ein simple Notes Bereich neben Kanban und Board View.",
+      "timestamp": "2025-10-14T06:59:20.257Z",
+      "completed": false,
+      "stackId": null,
+      "category": "p",
+      "uClass": null,
+      "priority": null,
+      "timeMinutes": 30,
+      "focused": false,
+      "assignedDay": null
+    },
+    {
+      "id": 1760424159499,
+      "content": "Mischteller kaufen über den Mittag",
+      "timestamp": "2025-10-14T06:42:39.499Z",
+      "completed": false,
+      "stackId": null,
+      "category": "u",
+      "uClass": "2a",
+      "priority": "!!!",
+      "timeMinutes": 30,
+      "focused": false,
+      "assignedDay": "tuesday"
+    },
+    {
+      "id": 1760424094161,
+      "content": "Am Freitag Tichu in die Agenda eintragen",
+      "timestamp": "2025-10-14T06:41:34.161Z",
+      "completed": false,
+      "stackId": null,
+      "category": "k",
+      "uClass": null,
+      "priority": null,
+      "timeMinutes": null,
+      "focused": false,
+      "assignedDay": "wednesday"
+    },
+    {
+      "id": 1760356426552,
+      "content": "Nächste Doppellektion für Licht und Farbe planen. Ich denke, es muss Übungen geben.",
+      "timestamp": "2025-10-13T11:53:46.552Z",
+      "completed": false,
+      "stackId": null,
+      "category": "k",
+      "priority": null,
+      "timeMinutes": 45,
+      "focused": false,
+      "assignedDay": "wednesday"
+    },
+    {
+      "id": 1760344563399,
+      "content": "Für Anita den Scan ausdrucken",
+      "timestamp": "2025-10-13T08:36:03.399Z",
+      "completed": false,
+      "stackId": null,
+      "category": "u",
+      "timeMinutes": 10,
+      "focused": false,
+      "assignedDay": "friday",
+      "uClass": "3b",
+      "priority": null
+    },
+    {
+      "id": 1760337118566,
+      "content": "Was könnte man Masterarbeitsthema sein --> Chat mit einer KI",
+      "timestamp": "2025-10-13T06:31:58.566Z",
+      "completed": false,
+      "stackId": null,
+      "category": "h",
+      "timeMinutes": 45,
+      "focused": false,
+      "assignedDay": "wednesday"
+    },
+    {
+      "id": 1760336588375,
+      "content": "Das Buz Item erledigen, da brauche ich die Quittung von zuhause auf dem Tascam im Büro",
+      "timestamp": "2025-10-13T06:23:08.376Z",
+      "completed": false,
+      "stackId": null,
+      "category": "k",
+      "timeMinutes": 15,
+      "focused": false,
+      "assignedDay": "wednesday"
+    },
+    {
+      "id": 1760333672430,
+      "content": "Martin das Weiterbildungsformular schicken oder zumindest ein Mail schicken",
+      "timestamp": "2025-10-13T05:34:32.430Z",
+      "completed": false,
+      "stackId": null,
+      "category": "k",
+      "timeMinutes": 5,
+      "focused": false,
+      "assignedDay": "friday"
+    },
+    {
+      "id": 1760333644773,
+      "content": "Material für Geländegame bereit machen, Zapfen, Karton etc.",
+      "timestamp": "2025-10-13T05:34:04.774Z",
+      "completed": false,
+      "stackId": null,
+      "category": "k",
+      "timeMinutes": 15,
+      "focused": false,
+      "assignedDay": "tuesday"
+    }
+  ],
+  "stacks": [
+    {
+      "id": 1760211212861,
+      "noteIds": [
+        1760210802737,
+        1760210802539,
+        1760210805005
+      ]
+    }
+  ],
+  "timestamp": "2025-10-14T12:14:28.140Z",
+  "version": "1.0"
+}

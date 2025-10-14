@@ -1,0 +1,198 @@
+{
+  "notes": [
+    {
+      "id": 1760280258473,
+      "content": "theater",
+      "timestamp": "2025-10-12T14:44:18.473Z",
+      "completed": false,
+      "stackId": 1760280262213,
+      "category": "k",
+      "timeMinutes": 45,
+      "focused": false
+    },
+    {
+      "id": 1760280113316,
+      "content": "kühlschrank",
+      "timestamp": "2025-10-12T14:41:53.316Z",
+      "completed": false,
+      "stackId": null,
+      "category": "p",
+      "timeMinutes": 30,
+      "focused": false
+    },
+    {
+      "id": 1760280100184,
+      "content": "müll raus",
+      "timestamp": "2025-10-12T14:41:40.184Z",
+      "completed": false,
+      "stackId": null,
+      "category": null,
+      "timeMinutes": null,
+      "focused": false
+    },
+    {
+      "id": 1760279738732,
+      "content": "jasdfasdffjf",
+      "timestamp": "2025-10-12T14:35:38.732Z",
+      "completed": false,
+      "stackId": 1760280232593,
+      "category": "h",
+      "timeMinutes": 9,
+      "focused": false
+    },
+    {
+      "id": 1760279735163,
+      "content": "jsdf",
+      "timestamp": "2025-10-12T14:35:35.163Z",
+      "completed": false,
+      "stackId": null,
+      "category": null,
+      "timeMinutes": null,
+      "focused": false
+    },
+    {
+      "id": 1760279733991,
+      "content": "jaskdjf",
+      "timestamp": "2025-10-12T14:35:33.991Z",
+      "completed": false,
+      "stackId": null,
+      "category": null,
+      "timeMinutes": null,
+      "focused": false
+    },
+    {
+      "id": 1760278926569,
+      "content": "asdf",
+      "timestamp": "2025-10-12T14:22:06.570Z",
+      "completed": false,
+      "stackId": null,
+      "category": null,
+      "timeMinutes": null,
+      "focused": false
+    },
+    {
+      "id": 1760278926128,
+      "content": "sf",
+      "timestamp": "2025-10-12T14:22:06.128Z",
+      "completed": false,
+      "stackId": null,
+      "category": null,
+      "timeMinutes": null,
+      "focused": false
+    },
+    {
+      "id": 1760278925442,
+      "content": "sadf",
+      "timestamp": "2025-10-12T14:22:05.442Z",
+      "completed": false,
+      "stackId": null,
+      "category": null,
+      "timeMinutes": null,
+      "focused": false
+    },
+    {
+      "id": 1760278925036,
+      "content": "sadf",
+      "timestamp": "2025-10-12T14:22:05.036Z",
+      "completed": false,
+      "stackId": null,
+      "category": null,
+      "timeMinutes": null,
+      "focused": false
+    },
+    {
+      "id": 1760278924533,
+      "content": "asf",
+      "timestamp": "2025-10-12T14:22:04.533Z",
+      "completed": false,
+      "stackId": null,
+      "category": null,
+      "timeMinutes": null,
+      "focused": false
+    },
+    {
+      "id": 1760278914338,
+      "content": "jajaja",
+      "timestamp": "2025-10-12T14:21:54.338Z",
+      "completed": false,
+      "stackId": 1760280232593,
+      "category": "h",
+      "timeMinutes": 16,
+      "focused": false
+    },
+    {
+      "id": 1760278496983,
+      "content": "dfadf",
+      "timestamp": "2025-10-12T14:14:56.983Z",
+      "completed": false,
+      "stackId": null,
+      "category": null,
+      "timeMinutes": null,
+      "position": null,
+      "focused": false
+    },
+    {
+      "id": 1760278495582,
+      "content": "sdf",
+      "timestamp": "2025-10-12T14:14:55.582Z",
+      "completed": false,
+      "stackId": null,
+      "category": null,
+      "timeMinutes": null,
+      "position": null,
+      "focused": false
+    },
+    {
+      "id": 1760278268223,
+      "content": "Alles für den ersten Schultag einpacken",
+      "timestamp": "2025-10-12T14:11:08.223Z",
+      "completed": false,
+      "stackId": 1760280262213,
+      "category": "k",
+      "timeMinutes": 10,
+      "position": null,
+      "focused": false
+    },
+    {
+      "id": 1760277435415,
+      "content": "ich",
+      "timestamp": "2025-10-12T13:57:15.415Z",
+      "completed": false,
+      "stackId": 1760280262213,
+      "category": "k",
+      "timeMinutes": 14,
+      "position": null,
+      "focused": false
+    }
+  ],
+  "stacks": [
+    {
+      "id": 1760211212861,
+      "noteIds": [
+        1760210802737,
+        1760210802539,
+        1760210805005
+      ]
+    },
+    {
+      "id": 1760280232593,
+      "noteIds": [
+        1760278914338,
+        1760279738732
+      ],
+      "title": "Masterarbeit",
+      "type": "sequential"
+    },
+    {
+      "id": 1760280262213,
+      "noteIds": [
+        1760280258473,
+        1760278268223,
+        1760277435415
+      ],
+      "title": "Theater"
+    }
+  ],
+  "timestamp": "2025-10-12T15:13:28.006Z",
+  "version": "1.0"
+}

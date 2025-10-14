@@ -1,0 +1,52 @@
+{
+  "notes": [
+    {
+      "id": 1760293693458,
+      "content": "maura fragen wegen freitag. kann ich tichu spielen gehen?",
+      "timestamp": "2025-10-12T18:28:13.458Z",
+      "completed": false,
+      "stackId": null,
+      "category": "p",
+      "timeMinutes": null,
+      "focused": false,
+      "assignedDay": "tuesday",
+      "_originalContent": "maura fragen wegen freitag. kann ich tichu spielen gehen?",
+      "_originalCategory": "p",
+      "_originalTime": null
+    },
+    {
+      "id": 1760292652300,
+      "content": "Kaffeebecher für morgen bereit machen",
+      "timestamp": "2025-10-12T18:10:52.300Z",
+      "completed": false,
+      "stackId": null,
+      "category": "k",
+      "timeMinutes": null,
+      "focused": false,
+      "assignedDay": null
+    },
+    {
+      "id": 1760291603045,
+      "content": "Alles einpacken für den ersten Schultag",
+      "timestamp": "2025-10-12T17:53:23.045Z",
+      "completed": false,
+      "stackId": null,
+      "category": "k",
+      "timeMinutes": 15,
+      "focused": false,
+      "assignedDay": null
+    }
+  ],
+  "stacks": [
+    {
+      "id": 1760211212861,
+      "noteIds": [
+        1760210802737,
+        1760210802539,
+        1760210805005
+      ]
+    }
+  ],
+  "timestamp": "2025-10-12T18:41:53.593Z",
+  "version": "1.0"
+}

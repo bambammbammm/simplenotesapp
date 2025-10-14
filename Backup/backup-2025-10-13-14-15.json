@@ -1,0 +1,149 @@
+{
+  "notes": [
+    {
+      "id": 1760356426552,
+      "content": "Nächste Doppellektion für Licht und Farbe planen. Ich denke, es muss Übungen geben.",
+      "timestamp": "2025-10-13T11:53:46.552Z",
+      "completed": false,
+      "stackId": null,
+      "category": "k",
+      "priority": null,
+      "timeMinutes": 45,
+      "focused": false,
+      "assignedDay": null
+    },
+    {
+      "id": 1760344563399,
+      "content": "Für Anita den Scan ausdrucken",
+      "timestamp": "2025-10-13T08:36:03.399Z",
+      "completed": false,
+      "stackId": null,
+      "category": "k",
+      "timeMinutes": 10,
+      "focused": false,
+      "assignedDay": "monday"
+    },
+    {
+      "id": 1760339873397,
+      "content": "max msp abo beenden",
+      "timestamp": "2025-10-13T07:17:53.397Z",
+      "completed": false,
+      "stackId": null,
+      "category": "p",
+      "timeMinutes": 10,
+      "focused": false,
+      "assignedDay": "monday",
+      "_originalContent": "max msp abo beenden",
+      "_originalCategory": "p",
+      "_originalTime": 10
+    },
+    {
+      "id": 1760337118566,
+      "content": "Was könnte man Masterarbeitsthema sein --> Chat mit einer KI",
+      "timestamp": "2025-10-13T06:31:58.566Z",
+      "completed": false,
+      "stackId": null,
+      "category": "h",
+      "timeMinutes": 45,
+      "focused": false,
+      "assignedDay": "wednesday"
+    },
+    {
+      "id": 1760336588375,
+      "content": "Das Buz Item erledigen, da brauche ich die Quittung von zuhause auf dem Tascam im Büro",
+      "timestamp": "2025-10-13T06:23:08.376Z",
+      "completed": false,
+      "stackId": null,
+      "category": "k",
+      "timeMinutes": 15,
+      "focused": false,
+      "assignedDay": "wednesday"
+    },
+    {
+      "id": 1760334874398,
+      "content": "Klären ob ich morgen Dienstag für Mark einspringe",
+      "timestamp": "2025-10-13T05:54:34.399Z",
+      "completed": false,
+      "stackId": null,
+      "category": "k",
+      "timeMinutes": 5,
+      "focused": false,
+      "assignedDay": "monday"
+    },
+    {
+      "id": 1760334833714,
+      "content": "Einkaufen --> Ich muss noch raussuchen, was wir kochen",
+      "timestamp": "2025-10-13T05:53:53.714Z",
+      "completed": false,
+      "stackId": 1760335004745,
+      "category": "p",
+      "timeMinutes": 20,
+      "focused": false,
+      "assignedDay": "monday"
+    },
+    {
+      "id": 1760334817022,
+      "content": "Andrea anrufen wegen Merenschwand",
+      "timestamp": "2025-10-13T05:53:37.022Z",
+      "completed": false,
+      "stackId": null,
+      "category": "p",
+      "timeMinutes": 15,
+      "focused": false,
+      "assignedDay": "wednesday"
+    },
+    {
+      "id": 1760333672430,
+      "content": "Martin das Weiterbildungsformular schicken oder zumindest ein Mail schicken",
+      "timestamp": "2025-10-13T05:34:32.430Z",
+      "completed": false,
+      "stackId": null,
+      "category": "k",
+      "timeMinutes": 5,
+      "focused": false,
+      "assignedDay": null
+    },
+    {
+      "id": 1760333644773,
+      "content": "Material für Geländegame bereit machen, Zapfen, Karton etc.",
+      "timestamp": "2025-10-13T05:34:04.774Z",
+      "completed": false,
+      "stackId": null,
+      "category": "k",
+      "timeMinutes": 15,
+      "focused": false,
+      "assignedDay": "monday"
+    },
+    {
+      "id": 1760293693458,
+      "content": "maura fragen wegen freitag. kann ich tichu spielen gehen?",
+      "timestamp": "2025-10-12T18:28:13.458Z",
+      "completed": false,
+      "stackId": null,
+      "category": "p",
+      "timeMinutes": 1,
+      "focused": false,
+      "assignedDay": "tuesday"
+    }
+  ],
+  "stacks": [
+    {
+      "id": 1760211212861,
+      "noteIds": [
+        1760210802737,
+        1760210802539,
+        1760210805005
+      ]
+    },
+    {
+      "id": 1760335004745,
+      "noteIds": [
+        1760334833714
+      ],
+      "title": "Kochen",
+      "type": "group"
+    }
+  ],
+  "timestamp": "2025-10-13T12:15:14.382Z",
+  "version": "1.0"
+}

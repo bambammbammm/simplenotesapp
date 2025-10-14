@@ -202,16 +202,26 @@ Inspired by terminal interfaces like Claude Code, the app features:
 
 ## Keyboard Shortcuts
 
-### Global
+### Global Shortcuts
+- `Cmd/Ctrl+Z` - Undo last action
+- `Cmd/Ctrl+1` - Switch to Board View
+- `Cmd/Ctrl+2` - Switch to Kanban View
+- `Cmd/Ctrl+3` - Switch to Plan View
+- `Cmd/Ctrl+N` - New note (focuses input in Board/Kanban, creates new in Plan)
+- `ESC` - Close modals / Clear filters / Clear input
+
+### Board & Kanban View
 - `Enter` - Save note (or save edit when editing)
 - `ESC` - Clear input field (or cancel edit when editing)
-- `Cmd/Ctrl+Z` - Undo last action
 
-### Plan View Only
+### Plan View
+- `Cmd/Ctrl+N` - Create new note (saves current if not empty)
+- `Cmd/Ctrl+S` - Save current note
 - `Cmd/Ctrl+B` - Make text **bold**
 - `Cmd/Ctrl+I` - Make text *italic*
 - `Cmd/Ctrl+Shift+8` - Insert bullet list
 - `Cmd/Ctrl+Shift+C` - Insert checkbox
+- `Alt+X` - Toggle checkbox
 
 ## Installation
 

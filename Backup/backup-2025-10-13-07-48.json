@@ -1,0 +1,52 @@
+{
+  "notes": [
+    {
+      "id": 1760333672430,
+      "content": "Martin das weiterbildungsformular schicken oder zumindest ein Mail schicken",
+      "timestamp": "2025-10-13T05:34:32.430Z",
+      "completed": false,
+      "stackId": null,
+      "category": "k",
+      "timeMinutes": 5,
+      "focused": false,
+      "assignedDay": null
+    },
+    {
+      "id": 1760333644773,
+      "content": "Material für Geländegame bereit machen",
+      "timestamp": "2025-10-13T05:34:04.774Z",
+      "completed": false,
+      "stackId": null,
+      "category": "k",
+      "timeMinutes": 15,
+      "focused": false,
+      "assignedDay": null
+    },
+    {
+      "id": 1760293693458,
+      "content": "maura fragen wegen freitag. kann ich tichu spielen gehen?",
+      "timestamp": "2025-10-12T18:28:13.458Z",
+      "completed": false,
+      "stackId": null,
+      "category": "p",
+      "timeMinutes": null,
+      "focused": false,
+      "assignedDay": "tuesday",
+      "_originalContent": "maura fragen wegen freitag. kann ich tichu spielen gehen?",
+      "_originalCategory": "p",
+      "_originalTime": null
+    }
+  ],
+  "stacks": [
+    {
+      "id": 1760211212861,
+      "noteIds": [
+        1760210802737,
+        1760210802539,
+        1760210805005
+      ]
+    }
+  ],
+  "timestamp": "2025-10-13T05:48:43.466Z",
+  "version": "1.0"
+}

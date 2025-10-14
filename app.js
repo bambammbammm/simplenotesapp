@@ -127,13 +127,8 @@ class NotesApp {
         // Event listeners
         this.noteInput.addEventListener('keydown', (e) => this.handleKeyDown(e));
 
-        // Undo listener (Cmd+Z / Ctrl+Z)
-        document.addEventListener('keydown', (e) => {
-            if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
-                e.preventDefault();
-                this.undo();
-            }
-        });
+        // Global keyboard shortcuts
+        document.addEventListener('keydown', (e) => this.handleGlobalKeyboard(e));
 
         // View switching button
         this.viewSwitchBtn.addEventListener('click', () => this.switchView());
@@ -178,11 +173,6 @@ class NotesApp {
         // Modal event listeners
         this.stackModalClose.addEventListener('click', () => this.closeStackModal());
         this.stackModal.querySelector('.stack-modal-overlay').addEventListener('click', () => this.closeStackModal());
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && this.stackModal.style.display !== 'none') {
-                this.closeStackModal();
-            }
-        });
 
         // Backup event listeners
         this.selectBackupFolderBtn.addEventListener('click', () => this.selectBackupFolder());
@@ -218,6 +208,93 @@ class NotesApp {
         } else if (e.key === 'Escape') {
             e.preventDefault();
             this.noteInput.value = '';
+        }
+    }
+
+    handleGlobalKeyboard(e) {
+        const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+        const cmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
+
+        // Don't handle shortcuts when typing in input fields or contenteditable
+        // EXCEPT for specific cases like Cmd+S
+        const isTyping = e.target.tagName === 'INPUT' ||
+                        e.target.tagName === 'TEXTAREA' ||
+                        e.target.isContentEditable;
+
+        // Cmd/Ctrl+Z → Undo
+        if (cmdOrCtrl && e.key === 'z' && !e.shiftKey) {
+            e.preventDefault();
+            this.undo();
+            return;
+        }
+
+        // Cmd/Ctrl+S → Save (Plan View only)
+        if (cmdOrCtrl && e.key === 's') {
+            if (this.currentView === 'plan') {
+                e.preventDefault();
+                this.promptSavePlanNote();
+                return;
+            }
+        }
+
+        // Cmd/Ctrl+N → New note
+        if (cmdOrCtrl && e.key === 'n' && !isTyping) {
+            e.preventDefault();
+            if (this.currentView === 'plan') {
+                this.createNewNote();
+            } else {
+                // Focus on input field in Board/Kanban view
+                this.noteInput.focus();
+            }
+            return;
+        }
+
+        // Cmd/Ctrl+1 → Board View
+        if (cmdOrCtrl && e.key === '1' && !isTyping) {
+            e.preventDefault();
+            this.switchToView('board');
+            return;
+        }
+
+        // Cmd/Ctrl+2 → Kanban View
+        if (cmdOrCtrl && e.key === '2' && !isTyping) {
+            e.preventDefault();
+            this.switchToView('kanban');
+            return;
+        }
+
+        // Cmd/Ctrl+3 → Plan View
+        if (cmdOrCtrl && e.key === '3' && !isTyping) {
+            e.preventDefault();
+            this.switchToView('plan');
+            return;
+        }
+
+        // ESC → Close modals / Clear filters
+        if (e.key === 'Escape') {
+            // Close stack modal if open
+            if (this.stackModal.style.display !== 'none') {
+                this.closeStackModal();
+                return;
+            }
+
+            // Close hamburger menu if open
+            if (this.hamburgerDropdown.style.display === 'block') {
+                this.closeHamburgerMenu();
+                return;
+            }
+
+            // Clear filters if any are active
+            if (this.activeFilters.size > 0) {
+                this.clearAllFilters();
+                return;
+            }
+
+            // If in Plan View and not in saved note, clear editor
+            if (this.currentView === 'plan' && !isTyping && !this.currentSavedNoteId) {
+                this.planEditor.innerHTML = '';
+                return;
+            }
         }
     }
 
@@ -1228,6 +1305,48 @@ class NotesApp {
             this.viewSwitchBtn.querySelector('.view-icon').textContent = '⊟';
             this.viewSwitchBtn.querySelector('.view-label').textContent = 'Board';
             // Focus on plan editor when switching to plan view
+            setTimeout(() => this.planEditor.focus(), 100);
+        } else {
+            this.notesCanvas.style.display = 'grid';
+            this.viewSwitchBtn.querySelector('.view-icon').textContent = '⊞';
+            this.viewSwitchBtn.querySelector('.view-label').textContent = 'Kanban';
+        }
+
+        this.render();
+    }
+
+    switchToView(viewName) {
+        // Auto-save current note if leaving plan view
+        if (this.currentView === 'plan' && this.currentSavedNoteId) {
+            const currentNote = this.savedNotes.find(n => n.id === this.currentSavedNoteId);
+            if (currentNote) {
+                const plainText = this.getPlainText();
+                if (plainText && plainText.trim().length > 0) {
+                    currentNote.content = this.planEditor.innerHTML;
+                    currentNote.plainText = plainText;
+                    currentNote.updatedAt = Date.now();
+                    localStorage.setItem('savedPlanNotes', JSON.stringify(this.savedNotes));
+                }
+            }
+        }
+
+        // Set view
+        this.currentView = viewName;
+
+        // Hide all views
+        this.notesCanvas.style.display = 'none';
+        this.kanbanView.style.display = 'none';
+        this.planView.style.display = 'none';
+
+        // Show current view and update button
+        if (this.currentView === 'kanban') {
+            this.kanbanView.style.display = 'flex';
+            this.viewSwitchBtn.querySelector('.view-icon').textContent = '✎';
+            this.viewSwitchBtn.querySelector('.view-label').textContent = 'Plan';
+        } else if (this.currentView === 'plan') {
+            this.planView.style.display = 'flex';
+            this.viewSwitchBtn.querySelector('.view-icon').textContent = '⊟';
+            this.viewSwitchBtn.querySelector('.view-label').textContent = 'Board';
             setTimeout(() => this.planEditor.focus(), 100);
         } else {
             this.notesCanvas.style.display = 'grid';
