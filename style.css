@@ -2131,30 +2131,13 @@ body {
     }
 }
 
-.command-palette-header {
-    padding: 16px;
-    border-bottom: 1px solid #333;
-}
-
-.command-palette-input {
-    width: 100%;
-    background-color: #252525;
-    border: 1px solid #444;
-    border-radius: 4px;
-    color: #e0e0e0;
-    font-size: 16px;
-    font-family: 'Courier New', 'Courier', monospace;
+.command-palette-hint {
     padding: 12px 16px;
-    outline: none;
-    transition: border-color 0.2s;
-}
-
-.command-palette-input:focus {
-    border-color: #7FDBDA;
-}
-
-.command-palette-input::placeholder {
-    color: #666;
+    border-bottom: 1px solid #333;
+    text-align: center;
+    font-size: 12px;
+    color: #888;
+    background-color: #252525;
 }
 
 .command-palette-body {

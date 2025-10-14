@@ -203,16 +203,15 @@ Inspired by terminal interfaces like Claude Code, the app features:
 ## Keyboard Shortcuts
 
 ### Global Shortcuts
-- `Cmd/Ctrl+K` - **Open Command Palette** (search and execute commands)
+- `Cmd/Ctrl+↑` or `Cmd/Ctrl+↓` - **Open Command Palette**
 - `Cmd/Ctrl+S` - Save current note (Plan View only)
 - `ESC` - Close Command Palette / Close modals / Clear filters
 
-### Command Palette
-Press `Cmd/Ctrl+K` to open the command palette, then:
-- Type to search commands
-- `↑` / `↓` - Navigate through commands
-- `Enter` - Execute selected command
-- `ESC` - Close palette
+### Command Palette (like Cmd+Tab)
+Press `Cmd/Ctrl+↑` or `Cmd/Ctrl+↓` to open the command palette, then:
+- `↑` / `↓` - Navigate through commands (while holding Cmd/Ctrl)
+- **Release Cmd/Ctrl** - Execute selected command
+- `ESC` - Close palette without executing
 
 Available commands:
 - Switch between views (Board, Kanban, Plan)

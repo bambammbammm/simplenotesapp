@@ -36,10 +36,10 @@ class NotesApp {
 
         // Command Palette
         this.commandPalette = document.getElementById('commandPalette');
-        this.commandPaletteInput = document.getElementById('commandPaletteInput');
         this.commandPaletteBody = document.getElementById('commandPaletteBody');
         this.commandPaletteSelectedIndex = 0;
         this.commandPaletteCommands = [];
+        this.commandPaletteKeyHeld = false;
 
         // Hamburger menu
         this.hamburgerMenuBtn = document.getElementById('hamburgerMenuBtn');
@@ -161,8 +161,13 @@ class NotesApp {
 
         // Command Palette event listeners
         this.commandPalette.querySelector('.command-palette-overlay').addEventListener('click', () => this.closeCommandPalette());
-        this.commandPaletteInput.addEventListener('input', () => this.filterCommands());
-        this.commandPaletteInput.addEventListener('keydown', (e) => this.handleCommandPaletteKeydown(e));
+
+        // Listen for Cmd/Ctrl key release globally
+        document.addEventListener('keyup', (e) => {
+            if (this.commandPaletteKeyHeld && (e.key === 'Meta' || e.key === 'Control')) {
+                this.executeSelectedCommand();
+            }
+        });
 
         // Collapse unassigned column button
         this.collapseUnassignedBtn.addEventListener('click', () => this.toggleUnassignedCollapse());
@@ -228,16 +233,31 @@ class NotesApp {
         const cmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
 
         // Don't handle shortcuts when typing in input fields or contenteditable
-        // EXCEPT for specific cases like Cmd+K, Cmd+S
+        // EXCEPT for specific cases like Cmd+↑/↓, Cmd+S
         const isTyping = e.target.tagName === 'INPUT' ||
                         e.target.tagName === 'TEXTAREA' ||
                         e.target.isContentEditable;
 
-        // Cmd/Ctrl+K → Open Command Palette
-        if (cmdOrCtrl && e.key === 'k') {
+        // Cmd/Ctrl+↑ or Cmd/Ctrl+↓ → Open Command Palette
+        if (cmdOrCtrl && (e.key === 'ArrowUp' || e.key === 'ArrowDown') && !isTyping) {
             e.preventDefault();
-            this.openCommandPalette();
+            if (this.commandPalette.style.display === 'none') {
+                this.openCommandPalette();
+            }
             return;
+        }
+
+        // Arrow keys when Command Palette is open
+        if (this.commandPalette.style.display !== 'none') {
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                this.navigateCommandPalette(1);
+                return;
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                this.navigateCommandPalette(-1);
+                return;
+            }
         }
 
         // Cmd/Ctrl+S → Save (Plan View only)
@@ -3213,37 +3233,46 @@ class NotesApp {
         });
 
         this.commandPaletteSelectedIndex = 0;
+        this.commandPaletteKeyHeld = true;
         this.commandPalette.style.display = 'flex';
-        this.commandPaletteInput.value = '';
         this.renderCommandPalette();
-        setTimeout(() => this.commandPaletteInput.focus(), 50);
     }
 
     closeCommandPalette() {
         this.commandPalette.style.display = 'none';
-        this.commandPaletteInput.value = '';
-    }
-
-    filterCommands() {
-        const query = this.commandPaletteInput.value.toLowerCase();
-        const filteredCommands = this.commandPaletteCommands.filter(cmd => {
-            return cmd.title.toLowerCase().includes(query) ||
-                   (cmd.description && cmd.description.toLowerCase().includes(query));
-        });
-
+        this.commandPaletteKeyHeld = false;
         this.commandPaletteSelectedIndex = 0;
-        this.renderCommandPalette(filteredCommands);
     }
 
-    renderCommandPalette(commands = this.commandPaletteCommands) {
+    navigateCommandPalette(direction) {
+        this.commandPaletteSelectedIndex += direction;
+
+        // Wrap around
+        if (this.commandPaletteSelectedIndex < 0) {
+            this.commandPaletteSelectedIndex = this.commandPaletteCommands.length - 1;
+        } else if (this.commandPaletteSelectedIndex >= this.commandPaletteCommands.length) {
+            this.commandPaletteSelectedIndex = 0;
+        }
+
+        this.renderCommandPalette();
+    }
+
+    executeSelectedCommand() {
+        if (this.commandPaletteCommands[this.commandPaletteSelectedIndex]) {
+            this.commandPaletteCommands[this.commandPaletteSelectedIndex].action();
+            this.closeCommandPalette();
+        }
+    }
+
+    renderCommandPalette() {
         this.commandPaletteBody.innerHTML = '';
 
-        if (commands.length === 0) {
-            this.commandPaletteBody.innerHTML = '<div class="command-palette-empty">Keine Befehle gefunden</div>';
+        if (this.commandPaletteCommands.length === 0) {
+            this.commandPaletteBody.innerHTML = '<div class="command-palette-empty">Keine Befehle verfügbar</div>';
             return;
         }
 
-        commands.forEach((cmd, index) => {
+        this.commandPaletteCommands.forEach((cmd, index) => {
             const item = document.createElement('div');
             item.className = 'command-item';
             if (index === this.commandPaletteSelectedIndex) {
@@ -3265,39 +3294,6 @@ class NotesApp {
 
             this.commandPaletteBody.appendChild(item);
         });
-    }
-
-    handleCommandPaletteKeydown(e) {
-        const query = this.commandPaletteInput.value.toLowerCase();
-        const filteredCommands = this.commandPaletteCommands.filter(cmd => {
-            return cmd.title.toLowerCase().includes(query) ||
-                   (cmd.description && cmd.description.toLowerCase().includes(query));
-        });
-
-        if (e.key === 'ArrowDown') {
-            e.preventDefault();
-            this.commandPaletteSelectedIndex = Math.min(
-                this.commandPaletteSelectedIndex + 1,
-                filteredCommands.length - 1
-            );
-            this.renderCommandPalette(filteredCommands);
-        } else if (e.key === 'ArrowUp') {
-            e.preventDefault();
-            this.commandPaletteSelectedIndex = Math.max(
-                this.commandPaletteSelectedIndex - 1,
-                0
-            );
-            this.renderCommandPalette(filteredCommands);
-        } else if (e.key === 'Enter') {
-            e.preventDefault();
-            if (filteredCommands[this.commandPaletteSelectedIndex]) {
-                filteredCommands[this.commandPaletteSelectedIndex].action();
-                this.closeCommandPalette();
-            }
-        } else if (e.key === 'Escape') {
-            e.preventDefault();
-            this.closeCommandPalette();
-        }
     }
 
 }
