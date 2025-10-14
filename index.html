@@ -234,13 +234,32 @@
 
         <!-- Plan View -->
         <main class="plan-view" id="planView" style="display: none;">
-            <div class="plan-editor-container">
-                <div
-                    class="plan-editor"
-                    id="planEditor"
-                    contenteditable="true"
-                    spellcheck="false"
-                    data-placeholder="Beginnen Sie mit der Planung...
+            <!-- Saved Notes Sidebar -->
+            <aside class="saved-notes-sidebar" id="savedNotesSidebar" style="display: none;">
+                <div class="saved-notes-header">
+                    <div class="saved-notes-header-top">
+                        <h3>Gespeicherte Notizen</h3>
+                        <div class="saved-notes-actions">
+                            <span class="saved-notes-count" id="savedNotesCount">0/5</span>
+                            <button class="saved-notes-collapse-btn" id="collapseSavedNotesBtn" title="Sidebar zuklappen">
+                                <span class="collapse-icon">‹</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="saved-notes-list" id="savedNotesList">
+                    <!-- Saved notes will be inserted here -->
+                </div>
+            </aside>
+
+            <div class="plan-main-content">
+                <div class="plan-editor-container">
+                    <div
+                        class="plan-editor"
+                        id="planEditor"
+                        contenteditable="true"
+                        spellcheck="false"
+                        data-placeholder="Beginnen Sie mit der Planung...
 
 Shortcuts:
 • Cmd+B → Fett
@@ -250,7 +269,18 @@ Shortcuts:
 • Alt+X → Checkbox umschalten
 
 Tipp: Schreiben Sie (Task-Name 30m --k) um automatisch eine Aufgabe zu erstellen."
-                ></div>
+                    ></div>
+                    <div class="plan-actions">
+                        <button class="plan-action-btn plan-new-btn" id="planNewBtn" title="Neue Notiz erstellen">
+                            <span class="action-icon">+</span>
+                            <span class="action-label">Neue Notiz</span>
+                        </button>
+                        <button class="plan-action-btn plan-save-btn" id="planSaveBtn" title="Notiz speichern">
+                            <span class="action-icon">⊡</span>
+                            <span class="action-label">Speichern</span>
+                        </button>
+                    </div>
+                </div>
             </div>
         </main>
 

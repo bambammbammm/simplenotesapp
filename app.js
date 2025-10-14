@@ -24,6 +24,16 @@ class NotesApp {
         this.unassignedCollapsed = false; // State for collapsed unassigned column
         this.collapseUnassignedBtn = document.getElementById('collapseUnassignedBtn');
 
+        // Saved Notes
+        this.savedNotes = []; // Max 5 saved plan notes
+        this.currentSavedNoteId = null; // Currently active saved note ID
+        this.savedNotesSidebar = document.getElementById('savedNotesSidebar');
+        this.savedNotesList = document.getElementById('savedNotesList');
+        this.savedNotesCount = document.getElementById('savedNotesCount');
+        this.planSaveBtn = document.getElementById('planSaveBtn');
+        this.collapseSavedNotesBtn = document.getElementById('collapseSavedNotesBtn');
+        this.savedNotesSidebarCollapsed = false;
+
         // Hamburger menu
         this.hamburgerMenuBtn = document.getElementById('hamburgerMenuBtn');
         this.hamburgerDropdown = document.getElementById('hamburgerDropdown');
@@ -111,6 +121,7 @@ class NotesApp {
         this.loadCompletedCounter();
         this.loadKanbanSettings();
         this.loadPlanText();
+        this.loadSavedNotes();
         this.checkAndResetCounter();
 
         // Event listeners
@@ -139,6 +150,12 @@ class NotesApp {
                 this.savePlanText();
             }
         });
+
+        // Saved Notes event listeners
+        this.planNewBtn = document.getElementById('planNewBtn');
+        this.planSaveBtn.addEventListener('click', () => this.promptSavePlanNote());
+        this.planNewBtn.addEventListener('click', () => this.createNewNote());
+        this.collapseSavedNotesBtn.addEventListener('click', () => this.toggleSavedNotesSidebar());
 
         // Collapse unassigned column button
         this.collapseUnassignedBtn.addEventListener('click', () => this.toggleUnassignedCollapse());
@@ -1173,6 +1190,20 @@ class NotesApp {
     }
 
     switchView() {
+        // Auto-save current note if leaving plan view
+        if (this.currentView === 'plan' && this.currentSavedNoteId) {
+            const currentNote = this.savedNotes.find(n => n.id === this.currentSavedNoteId);
+            if (currentNote) {
+                const plainText = this.getPlainText();
+                if (plainText && plainText.trim().length > 0) {
+                    currentNote.content = this.planEditor.innerHTML;
+                    currentNote.plainText = plainText;
+                    currentNote.updatedAt = Date.now();
+                    localStorage.setItem('savedPlanNotes', JSON.stringify(this.savedNotes));
+                }
+            }
+        }
+
         // Cycle through: board → kanban → plan → board
         if (this.currentView === 'board') {
             this.currentView = 'kanban';
@@ -2809,6 +2840,195 @@ class NotesApp {
         const saved = localStorage.getItem('planText');
         if (saved) {
             this.planEditor.innerHTML = saved;
+        }
+    }
+
+    // ============================================
+    // SAVED NOTES MANAGEMENT
+    // ============================================
+
+    loadSavedNotes() {
+        const saved = localStorage.getItem('savedPlanNotes');
+        if (saved) {
+            this.savedNotes = JSON.parse(saved);
+        }
+        this.renderSavedNotes();
+        this.updateSavedNotesVisibility();
+    }
+
+    saveSavedNotes() {
+        localStorage.setItem('savedPlanNotes', JSON.stringify(this.savedNotes));
+        this.renderSavedNotes();
+        this.updateSavedNotesVisibility();
+    }
+
+    createNewNote() {
+        // Auto-save current note if it exists and is not empty
+        if (this.currentSavedNoteId) {
+            const currentNote = this.savedNotes.find(n => n.id === this.currentSavedNoteId);
+            if (currentNote) {
+                const plainText = this.getPlainText();
+                if (plainText && plainText.trim().length > 0) {
+                    currentNote.content = this.planEditor.innerHTML;
+                    currentNote.plainText = plainText;
+                    currentNote.updatedAt = Date.now();
+                    this.saveSavedNotes();
+                }
+            }
+        }
+
+        // Clear editor and reset current note ID
+        this.planEditor.innerHTML = '';
+        this.currentSavedNoteId = null;
+        this.renderSavedNotes(); // Re-render to remove active state
+        this.planEditor.focus();
+    }
+
+    promptSavePlanNote() {
+        // Check if current note is empty
+        const plainText = this.getPlainText();
+        if (!plainText || plainText.trim().length === 0) {
+            alert('Die aktuelle Notiz ist leer und kann nicht gespeichert werden.');
+            return;
+        }
+
+        // If we're editing an existing note, just update it
+        if (this.currentSavedNoteId) {
+            const existingNote = this.savedNotes.find(n => n.id === this.currentSavedNoteId);
+            if (existingNote) {
+                existingNote.content = this.planEditor.innerHTML;
+                existingNote.plainText = plainText;
+                existingNote.updatedAt = Date.now();
+                this.saveSavedNotes();
+                alert('Notiz aktualisiert!');
+                return;
+            }
+        }
+
+        // Check if max limit reached for new notes
+        if (this.savedNotes.length >= 5) {
+            alert('Maximum 5 Notizen können gespeichert werden. Bitte löschen Sie eine bestehende Notiz.');
+            return;
+        }
+
+        // Prompt for name for new note
+        const name = prompt('Geben Sie einen Namen für diese Notiz ein:');
+        if (name && name.trim().length > 0) {
+            this.savePlanNote(name.trim());
+        }
+    }
+
+    savePlanNote(name) {
+        const content = this.planEditor.innerHTML;
+        const plainText = this.getPlainText();
+
+        // Create new saved note
+        const savedNote = {
+            id: Date.now(),
+            name: name,
+            content: content,
+            plainText: plainText,
+            createdAt: Date.now(),
+            updatedAt: Date.now()
+        };
+
+        this.savedNotes.push(savedNote);
+        this.currentSavedNoteId = savedNote.id;
+        this.saveSavedNotes();
+    }
+
+    loadSavedNote(id) {
+        // Auto-save current note if it's not empty and has an ID
+        if (this.currentSavedNoteId) {
+            const currentNote = this.savedNotes.find(n => n.id === this.currentSavedNoteId);
+            if (currentNote) {
+                const plainText = this.getPlainText();
+                if (plainText && plainText.trim().length > 0) {
+                    currentNote.content = this.planEditor.innerHTML;
+                    currentNote.plainText = plainText;
+                    currentNote.updatedAt = Date.now();
+                    this.saveSavedNotes();
+                }
+            }
+        }
+
+        // Load selected note
+        const savedNote = this.savedNotes.find(n => n.id === id);
+        if (savedNote) {
+            this.planEditor.innerHTML = savedNote.content;
+            this.currentSavedNoteId = savedNote.id;
+            this.renderSavedNotes(); // Re-render to show active state
+        }
+    }
+
+    deleteSavedNote(id, event) {
+        event.stopPropagation(); // Prevent loading the note when clicking delete
+
+        if (!confirm('Möchten Sie diese Notiz wirklich löschen?')) {
+            return;
+        }
+
+        this.savedNotes = this.savedNotes.filter(n => n.id !== id);
+
+        // If deleting the current note, clear editor
+        if (this.currentSavedNoteId === id) {
+            this.planEditor.innerHTML = '';
+            this.currentSavedNoteId = null;
+        }
+
+        this.saveSavedNotes();
+    }
+
+    renderSavedNotes() {
+        this.savedNotesList.innerHTML = '';
+
+        this.savedNotes.forEach(savedNote => {
+            const item = document.createElement('div');
+            item.className = 'saved-note-item';
+            if (savedNote.id === this.currentSavedNoteId) {
+                item.classList.add('active');
+            }
+
+            // Create preview text (first 50 chars)
+            const preview = savedNote.plainText.substring(0, 50) +
+                           (savedNote.plainText.length > 50 ? '...' : '');
+
+            item.innerHTML = `
+                <div class="saved-note-item-header">
+                    <div class="saved-note-name">${savedNote.name}</div>
+                    <button class="saved-note-delete" title="Löschen">×</button>
+                </div>
+                <div class="saved-note-preview">${preview}</div>
+            `;
+
+            // Add click handler to load note
+            item.addEventListener('click', () => this.loadSavedNote(savedNote.id));
+
+            // Add delete handler
+            const deleteBtn = item.querySelector('.saved-note-delete');
+            deleteBtn.addEventListener('click', (e) => this.deleteSavedNote(savedNote.id, e));
+
+            this.savedNotesList.appendChild(item);
+        });
+
+        // Update counter
+        this.savedNotesCount.textContent = `${this.savedNotes.length}/5`;
+    }
+
+    updateSavedNotesVisibility() {
+        if (this.savedNotes.length > 0) {
+            this.savedNotesSidebar.style.display = 'flex';
+        } else {
+            this.savedNotesSidebar.style.display = 'none';
+        }
+    }
+
+    toggleSavedNotesSidebar() {
+        this.savedNotesSidebarCollapsed = !this.savedNotesSidebarCollapsed;
+        if (this.savedNotesSidebarCollapsed) {
+            this.savedNotesSidebar.classList.add('collapsed');
+        } else {
+            this.savedNotesSidebar.classList.remove('collapsed');
         }
     }
 
