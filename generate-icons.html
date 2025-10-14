@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Icon Generator</title>
+    <style>
+        body {
+            background: #0f0f0f;
+            color: #fff;
+            font-family: monospace;
+            padding: 40px;
+            text-align: center;
+        }
+        canvas {
+            border: 2px solid #7FDBDA;
+            margin: 20px;
+            border-radius: 20px;
+        }
+        button {
+            background: #7FDBDA;
+            color: #0f0f0f;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            font-family: monospace;
+            cursor: pointer;
+            margin: 10px;
+            border-radius: 8px;
+        }
+        button:hover { background: #6ec9c8; }
+    </style>
+</head>
+<body>
+    <h1>Simple Notes App - Icon Generator</h1>
+    <p>Klick auf die Buttons, um die Icons herunterzuladen</p>
+
+    <canvas id="icon192" width="192" height="192"></canvas>
+    <canvas id="icon512" width="512" height="512"></canvas>
+
+    <div>
+        <button onclick="download('icon192', 'icon-192.png')">Download 192x192</button>
+        <button onclick="download('icon512', 'icon-512.png')">Download 512x512</button>
+    </div>
+
+    <script>
+        function drawIcon(canvas) {
+            const ctx = canvas.getContext('2d');
+            const size = canvas.width;
+            const radius = size * 0.15;
+
+            // Background
+            ctx.fillStyle = '#0f0f0f';
+            ctx.beginPath();
+            ctx.roundRect(0, 0, size, size, radius);
+            ctx.fill();
+
+            // Text
+            ctx.fillStyle = '#7FDBDA';
+            ctx.font = `bold ${size * 0.27}px monospace`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('>_N', size / 2, size / 2 + size * 0.02);
+        }
+
+        function download(canvasId, filename) {
+            const canvas = document.getElementById(canvasId);
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        // Draw both icons
+        drawIcon(document.getElementById('icon192'));
+        drawIcon(document.getElementById('icon512'));
+    </script>
+</body>
+</html>
