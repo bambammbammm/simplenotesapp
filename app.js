@@ -34,6 +34,13 @@ class NotesApp {
         this.collapseSavedNotesBtn = document.getElementById('collapseSavedNotesBtn');
         this.savedNotesSidebarCollapsed = false;
 
+        // Command Palette
+        this.commandPalette = document.getElementById('commandPalette');
+        this.commandPaletteInput = document.getElementById('commandPaletteInput');
+        this.commandPaletteBody = document.getElementById('commandPaletteBody');
+        this.commandPaletteSelectedIndex = 0;
+        this.commandPaletteCommands = [];
+
         // Hamburger menu
         this.hamburgerMenuBtn = document.getElementById('hamburgerMenuBtn');
         this.hamburgerDropdown = document.getElementById('hamburgerDropdown');
@@ -152,6 +159,11 @@ class NotesApp {
         this.planNewBtn.addEventListener('click', () => this.createNewNote());
         this.collapseSavedNotesBtn.addEventListener('click', () => this.toggleSavedNotesSidebar());
 
+        // Command Palette event listeners
+        this.commandPalette.querySelector('.command-palette-overlay').addEventListener('click', () => this.closeCommandPalette());
+        this.commandPaletteInput.addEventListener('input', () => this.filterCommands());
+        this.commandPaletteInput.addEventListener('keydown', (e) => this.handleCommandPaletteKeydown(e));
+
         // Collapse unassigned column button
         this.collapseUnassignedBtn.addEventListener('click', () => this.toggleUnassignedCollapse());
 
@@ -216,15 +228,15 @@ class NotesApp {
         const cmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
 
         // Don't handle shortcuts when typing in input fields or contenteditable
-        // EXCEPT for specific cases like Cmd+S
+        // EXCEPT for specific cases like Cmd+K, Cmd+S
         const isTyping = e.target.tagName === 'INPUT' ||
                         e.target.tagName === 'TEXTAREA' ||
                         e.target.isContentEditable;
 
-        // Cmd/Ctrl+Z → Undo
-        if (cmdOrCtrl && e.key === 'z' && !e.shiftKey) {
+        // Cmd/Ctrl+K → Open Command Palette
+        if (cmdOrCtrl && e.key === 'k') {
             e.preventDefault();
-            this.undo();
+            this.openCommandPalette();
             return;
         }
 
@@ -237,41 +249,14 @@ class NotesApp {
             }
         }
 
-        // Cmd/Ctrl+N → New note
-        if (cmdOrCtrl && e.key === 'n' && !isTyping) {
-            e.preventDefault();
-            if (this.currentView === 'plan') {
-                this.createNewNote();
-            } else {
-                // Focus on input field in Board/Kanban view
-                this.noteInput.focus();
-            }
-            return;
-        }
-
-        // Cmd/Ctrl+1 → Board View
-        if (cmdOrCtrl && e.key === '1' && !isTyping) {
-            e.preventDefault();
-            this.switchToView('board');
-            return;
-        }
-
-        // Cmd/Ctrl+2 → Kanban View
-        if (cmdOrCtrl && e.key === '2' && !isTyping) {
-            e.preventDefault();
-            this.switchToView('kanban');
-            return;
-        }
-
-        // Cmd/Ctrl+3 → Plan View
-        if (cmdOrCtrl && e.key === '3' && !isTyping) {
-            e.preventDefault();
-            this.switchToView('plan');
-            return;
-        }
-
         // ESC → Close modals / Clear filters
         if (e.key === 'Escape') {
+            // Close command palette if open
+            if (this.commandPalette.style.display !== 'none') {
+                this.closeCommandPalette();
+                return;
+            }
+
             // Close stack modal if open
             if (this.stackModal.style.display !== 'none') {
                 this.closeStackModal();
@@ -3148,6 +3133,170 @@ class NotesApp {
             this.savedNotesSidebar.classList.add('collapsed');
         } else {
             this.savedNotesSidebar.classList.remove('collapsed');
+        }
+    }
+
+    // ============================================
+    // COMMAND PALETTE
+    // ============================================
+
+    openCommandPalette() {
+        // Define available commands
+        this.commandPaletteCommands = [
+            {
+                id: 'view-board',
+                title: 'Wechsle zu Board View',
+                description: 'Standard-Ansicht mit Grid-Layout',
+                icon: '⊟',
+                action: () => this.switchToView('board')
+            },
+            {
+                id: 'view-kanban',
+                title: 'Wechsle zu Kanban View',
+                description: 'Wochenplanung mit Spalten',
+                icon: '⊞',
+                action: () => this.switchToView('kanban')
+            },
+            {
+                id: 'view-plan',
+                title: 'Wechsle zu Plan View',
+                description: 'Notizen und Planung',
+                icon: '✎',
+                action: () => this.switchToView('plan')
+            },
+            {
+                id: 'new-note',
+                title: 'Neue Notiz',
+                description: 'Erstelle eine neue Notiz',
+                icon: '+',
+                action: () => {
+                    if (this.currentView === 'plan') {
+                        this.createNewNote();
+                    } else {
+                        this.noteInput.focus();
+                    }
+                }
+            },
+            {
+                id: 'save-note',
+                title: 'Notiz speichern',
+                description: 'Speichere aktuelle Plan-Notiz',
+                icon: '⊡',
+                action: () => {
+                    if (this.currentView === 'plan') {
+                        this.promptSavePlanNote();
+                    }
+                },
+                condition: () => this.currentView === 'plan'
+            },
+            {
+                id: 'clear-filters',
+                title: 'Filter zurücksetzen',
+                description: 'Alle aktiven Filter entfernen',
+                icon: '×',
+                action: () => this.clearAllFilters(),
+                condition: () => this.activeFilters.size > 0
+            },
+            {
+                id: 'undo',
+                title: 'Rückgängig machen',
+                description: 'Letzte Aktion rückgängig machen',
+                icon: '↺',
+                action: () => this.undo(),
+                condition: () => this.undoHistory !== null
+            }
+        ];
+
+        // Filter commands based on conditions
+        this.commandPaletteCommands = this.commandPaletteCommands.filter(cmd => {
+            return !cmd.condition || cmd.condition();
+        });
+
+        this.commandPaletteSelectedIndex = 0;
+        this.commandPalette.style.display = 'flex';
+        this.commandPaletteInput.value = '';
+        this.renderCommandPalette();
+        setTimeout(() => this.commandPaletteInput.focus(), 50);
+    }
+
+    closeCommandPalette() {
+        this.commandPalette.style.display = 'none';
+        this.commandPaletteInput.value = '';
+    }
+
+    filterCommands() {
+        const query = this.commandPaletteInput.value.toLowerCase();
+        const filteredCommands = this.commandPaletteCommands.filter(cmd => {
+            return cmd.title.toLowerCase().includes(query) ||
+                   (cmd.description && cmd.description.toLowerCase().includes(query));
+        });
+
+        this.commandPaletteSelectedIndex = 0;
+        this.renderCommandPalette(filteredCommands);
+    }
+
+    renderCommandPalette(commands = this.commandPaletteCommands) {
+        this.commandPaletteBody.innerHTML = '';
+
+        if (commands.length === 0) {
+            this.commandPaletteBody.innerHTML = '<div class="command-palette-empty">Keine Befehle gefunden</div>';
+            return;
+        }
+
+        commands.forEach((cmd, index) => {
+            const item = document.createElement('div');
+            item.className = 'command-item';
+            if (index === this.commandPaletteSelectedIndex) {
+                item.classList.add('selected');
+            }
+
+            item.innerHTML = `
+                <div class="command-icon">${cmd.icon}</div>
+                <div class="command-info">
+                    <div class="command-title">${cmd.title}</div>
+                    ${cmd.description ? `<div class="command-description">${cmd.description}</div>` : ''}
+                </div>
+            `;
+
+            item.addEventListener('click', () => {
+                cmd.action();
+                this.closeCommandPalette();
+            });
+
+            this.commandPaletteBody.appendChild(item);
+        });
+    }
+
+    handleCommandPaletteKeydown(e) {
+        const query = this.commandPaletteInput.value.toLowerCase();
+        const filteredCommands = this.commandPaletteCommands.filter(cmd => {
+            return cmd.title.toLowerCase().includes(query) ||
+                   (cmd.description && cmd.description.toLowerCase().includes(query));
+        });
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            this.commandPaletteSelectedIndex = Math.min(
+                this.commandPaletteSelectedIndex + 1,
+                filteredCommands.length - 1
+            );
+            this.renderCommandPalette(filteredCommands);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            this.commandPaletteSelectedIndex = Math.max(
+                this.commandPaletteSelectedIndex - 1,
+                0
+            );
+            this.renderCommandPalette(filteredCommands);
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (filteredCommands[this.commandPaletteSelectedIndex]) {
+                filteredCommands[this.commandPaletteSelectedIndex].action();
+                this.closeCommandPalette();
+            }
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            this.closeCommandPalette();
         }
     }
 

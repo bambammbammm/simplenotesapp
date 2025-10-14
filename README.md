@@ -203,19 +203,29 @@ Inspired by terminal interfaces like Claude Code, the app features:
 ## Keyboard Shortcuts
 
 ### Global Shortcuts
-- `Cmd/Ctrl+Z` - Undo last action
-- `Cmd/Ctrl+1` - Switch to Board View
-- `Cmd/Ctrl+2` - Switch to Kanban View
-- `Cmd/Ctrl+3` - Switch to Plan View
-- `Cmd/Ctrl+N` - New note (focuses input in Board/Kanban, creates new in Plan)
-- `ESC` - Close modals / Clear filters / Clear input
+- `Cmd/Ctrl+K` - **Open Command Palette** (search and execute commands)
+- `Cmd/Ctrl+S` - Save current note (Plan View only)
+- `ESC` - Close Command Palette / Close modals / Clear filters
+
+### Command Palette
+Press `Cmd/Ctrl+K` to open the command palette, then:
+- Type to search commands
+- `↑` / `↓` - Navigate through commands
+- `Enter` - Execute selected command
+- `ESC` - Close palette
+
+Available commands:
+- Switch between views (Board, Kanban, Plan)
+- Create new note
+- Save note
+- Clear filters
+- Undo last action
 
 ### Board & Kanban View
 - `Enter` - Save note (or save edit when editing)
 - `ESC` - Clear input field (or cancel edit when editing)
 
 ### Plan View
-- `Cmd/Ctrl+N` - Create new note (saves current if not empty)
 - `Cmd/Ctrl+S` - Save current note
 - `Cmd/Ctrl+B` - Make text **bold**
 - `Cmd/Ctrl+I` - Make text *italic*
