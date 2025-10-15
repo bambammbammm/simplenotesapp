@@ -23,10 +23,36 @@ Minimalistische Todo-App mit Terminal-Design. Pure Vanilla JavaScript.
 ## Wichtigste Features
 
 ### 1. Plan View
-- Typewriter-Editor mit Live Markdown (Cmd+B, Cmd+I, Cmd+Shift+8, Cmd+Shift+C)
+- Typewriter-Editor mit Live Markdown
 - Auto-Task: `(Task 30m --k !!)` → Karte + grünes `[...] ✓`
+- **Stack-Blöcke**: Mehrere Tasks als Stack erstellen
 - **Parsing-Order**: Kategorie → Priorität → Zeit
 - Storage: `planText` als innerHTML (nicht plain text!)
+
+#### Keyboard Shortcuts (Plan View)
+- **Cmd+B** (Ctrl+B): Bold
+- **Cmd+I** (Ctrl+I): Italic
+- **Cmd+Shift+8** (Ctrl+Shift+8): Bullet List
+- **Cmd+Shift+C** (Ctrl+Shift+C): Checkbox
+- **Cmd+Enter** (Ctrl+Enter): Stack erstellen (Alternative zu `/` Trigger)
+- **Cmd+Z** (Ctrl+Z): Undo (letzte Aktion rückgängig machen)
+
+#### Stack-Block-Syntax
+```
+seq: Stack Titel
+- Task 1 30m --k
+- Task 2 45m --h !!
+- Task 3 20m --p
+/  (oder Cmd+Enter)
+```
+- **Trigger**: `/` auf neuer Zeile ODER **Cmd+Enter** (fügt `/` automatisch ein)
+- **Typen**: `seq:` = Sequential (→), `group:` = Group (+)
+- **Parsing**: Jeder Bullet wie normaler Task (Zeit, Kategorie, Prio)
+- **Reihenfolge**: Erste Task = Oberste Karte im Stack
+- **Bestätigung**: `seq: Stack Titel [→ 3 Tasks] ✓` (grün, fade-in)
+- **Check**: Stack mit gleichem Titel wird nicht doppelt erstellt
+- **Debouncing**: Parsing läuft erst 300ms nach letzter Eingabe (Performance)
+- **Cmd+Enter**: Bypassed Debouncing, triggert sofort
 
 ### 2. Kategorien
 - `--k` (türkis), `--h` (gelb), `--p` (rot), `--u` (lila)
@@ -56,6 +82,21 @@ Minimalistische Todo-App mit Terminal-Design. Pure Vanilla JavaScript.
 - Zählt erledigte Tasks heute
 - Auto-Reset bei Mitternacht
 - **Nur** bei Complete (○), nicht bei Delete!
+
+### 8. Undo System
+- **Cmd+Z** (Ctrl+Z) macht letzte Aktion rückgängig
+- **Unterstützt**: Note/Stack Creation, Note Deletion, Note Completion
+- **History**: Bis zu 10 Aktionen im `undoStack`
+- **Stack Undo**: Entfernt Stack UND alle dazugehörigen Notes
+- **Scope**: Funktioniert global, außer in Input/Textarea (außer Plan Editor)
+- **Wichtig**: Undo entfernt Notes permanent (nicht nur complete)
+
+### 9. Visuelle Animationen
+- **Stack/Task Creation**: Fade-in Animation (0.5s) für grüne Bestätigung in Plan View
+- **Neue Karten**: Opacity-basierter Pulse-Effekt (2 Pulses, 1.4s) für neu erstellte Notes
+- **Tracking**: `newlyCreatedNoteIds` Set speichert IDs bis View-Switch
+- **Trigger**: Animation startet automatisch beim Switch zu Board/Kanban View
+- **Cleanup**: Nach 1s werden IDs aus Set entfernt, Animation endet automatisch
 
 ## Kritische Implementierungsdetails
 
@@ -100,6 +141,9 @@ stacks = stacks.filter(s => s.noteIds.length > 0);
 3. **Cursor-Management**: Nach Task-Creation aus grünem Span bewegen
 4. **--u Parsing**: Vor anderen Kategorien parsen
 5. **Session Stats**: localStorage persistent, nicht nur in Sidebar
+6. **Stack-Block Parsing**: Trigger (`/`) nötig, sonst wird bei jedem Input neu erstellt
+7. **Stack Zeit-Addition**: Summe aller Tasks (auch bei Sequential), nicht nur Top-Card
+8. **getPlainText()**: `<br>` und `<div>` zu `\n` konvertieren für Regex-Matching
 
 ## LocalStorage Keys
 
@@ -121,8 +165,18 @@ stacks = stacks.filter(s => s.noteIds.length > 0);
 - Parsing-Reihenfolge kritisch
 - CSS Variables für dynamische Farben
 - LocalStorage braucht Cleanup
-- Animations-Timing wichtig (300ms)
+- Animations-Timing wichtig (300ms debounce, 1s animation)
 - Modal besser als Inline für komplexe Interaktionen
 - Buttons besser als Drag & Drop für Reordering
 - Event-Listener Duplikation vermeiden
 - ContentEditable + `execCommand()` für Rich Text
+- **Explizite Trigger** (wie `/`) besser als implizite (Leerzeile, EOF) für User-Actions
+- **Keyboard Shortcuts** als Alternative zu visuellen Triggern (Cmd+Enter statt `/`)
+- **HTML-zu-Text-Konvertierung** muss Newlines preservieren (`<br>`/`<div>` → `\n`)
+- **Stack-Block-Parsing**: Bei `input` Event läuft Code oft (Performance beachten!)
+- **Debouncing**: 300ms Delay = bessere Performance ohne spürbare Latenz
+- **Animation-Timing**: Trigger bei View-Switch, nicht bei Creation (besseres UX)
+- **Visuelles Feedback**: CSS-Animationen mit `setTimeout` cleanup nach Animation-Ende
+- **Undo-System**: Simple Stack-basierte History reicht für 90% Use Cases
+- **newlyCreatedNoteIds Set**: Temporäres Tracking für Animations-State zwischen Views
+- **Opacity-Animationen** besser als Transform für subtile Effekte (weniger aufdringlich)

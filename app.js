@@ -23,6 +23,10 @@ class NotesApp {
         this.planText = ''; // Store plan text
         this.unassignedCollapsed = false; // State for collapsed unassigned column
         this.collapseUnassignedBtn = document.getElementById('collapseUnassignedBtn');
+        this.planInputDebounceTimer = null; // Debounce timer for plan input parsing
+        this.newlyCreatedNoteIds = new Set(); // Track newly created notes for animation
+        this.undoStack = []; // Stack of actions for undo functionality
+        this.maxUndoStack = 10; // Maximum undo history
 
         // Saved Notes
         this.savedNotes = []; // Max 5 saved plan notes
@@ -141,7 +145,7 @@ class NotesApp {
         this.viewSwitchBtn.addEventListener('click', () => this.switchView());
 
         // Plan editor event listeners
-        this.planEditor.addEventListener('input', () => this.handlePlanInput());
+        this.planEditor.addEventListener('input', () => this.handlePlanInputDebounced());
         this.planEditor.addEventListener('blur', () => this.savePlanText());
         this.planEditor.addEventListener('keydown', (e) => this.handlePlanKeyDown(e));
 
@@ -201,6 +205,25 @@ class NotesApp {
         this.pauseBtn.addEventListener('click', () => this.togglePause());
         this.stopBtn.addEventListener('click', () => this.stopWork());
         this.sessionSummaryClose.addEventListener('click', () => this.closeSessionSummary());
+
+        // Global keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+            const cmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
+
+            // Undo: Cmd/Ctrl + Z (global)
+            if (cmdOrCtrl && e.key === 'z' && !e.shiftKey) {
+                // Don't trigger if user is typing in an input/textarea (except plan editor)
+                const target = e.target;
+                const isEditable = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' ||
+                                  (target.contentEditable === 'true' && target.id !== 'planEditor');
+
+                if (!isEditable) {
+                    e.preventDefault();
+                    this.undo();
+                }
+            }
+        });
 
         // Filter event listeners
         Object.values(this.filterButtons).forEach(btn => {
@@ -1314,6 +1337,20 @@ class NotesApp {
         }
 
         this.render();
+
+        // Trigger animation cleanup for newly created notes when switching to board/kanban view
+        if (this.currentView === 'board' || this.currentView === 'kanban') {
+            if (this.newlyCreatedNoteIds.size > 0) {
+                console.log('Starting animation timer for', this.newlyCreatedNoteIds.size, 'notes in', this.currentView, 'view');
+                // After animation completes (1s), remove IDs from tracking set
+                setTimeout(() => {
+                    this.newlyCreatedNoteIds.forEach(id => {
+                        console.log('Removing animation tracking for note:', id);
+                    });
+                    this.newlyCreatedNoteIds.clear();
+                }, 1000);
+            }
+        }
     }
 
     switchToView(viewName) {
@@ -1356,6 +1393,20 @@ class NotesApp {
         }
 
         this.render();
+
+        // Trigger animation cleanup for newly created notes when switching to board/kanban view
+        if (this.currentView === 'board' || this.currentView === 'kanban') {
+            if (this.newlyCreatedNoteIds.size > 0) {
+                console.log('Starting animation timer for', this.newlyCreatedNoteIds.size, 'notes in', this.currentView, 'view');
+                // After animation completes (1s), remove IDs from tracking set
+                setTimeout(() => {
+                    this.newlyCreatedNoteIds.forEach(id => {
+                        console.log('Removing animation tracking for note:', id);
+                    });
+                    this.newlyCreatedNoteIds.clear();
+                }, 1000);
+            }
+        }
     }
 
     renderBoard() {
@@ -1849,11 +1900,8 @@ class NotesApp {
         container.appendChild(badge);
 
         // Calculate total time for stack
-        // For sequential: only count the last card (visually on top, active)
-        // For group: count all cards
-        const totalTime = stack.type === 'sequential'
-            ? (stackNotes[stackNotes.length - 1]?.timeMinutes || 0)
-            : stackNotes.reduce((sum, note) => sum + (note.timeMinutes || 0), 0);
+        // For both sequential and group: count all cards (total work required)
+        const totalTime = stackNotes.reduce((sum, note) => sum + (note.timeMinutes || 0), 0);
 
         // Display notes with last added on top
         stackNotes.forEach((note, index) => {
@@ -1885,6 +1933,13 @@ class NotesApp {
             card.style.setProperty('--stack-index', stackIndex);
             card.style.setProperty('--stack-total', totalInStack);
         }
+
+        // Add pulse animation for newly created notes
+        if (this.newlyCreatedNoteIds.has(note.id)) {
+            card.classList.add('pulse-animation');
+            console.log('Adding pulse animation to note:', note.id);
+        }
+
         card.dataset.noteId = note.id;
 
         // Add category data attribute for color coding
@@ -2819,6 +2874,114 @@ class NotesApp {
             this.insertCheckbox();
             return;
         }
+
+        // Stack creation: Cmd/Ctrl + Enter
+        if (cmdOrCtrl && e.key === 'Enter') {
+            e.preventDefault();
+            this.triggerStackCreation();
+            return;
+        }
+
+        // Undo: Cmd/Ctrl + Z
+        if (cmdOrCtrl && e.key === 'z') {
+            e.preventDefault();
+            this.undo();
+            return;
+        }
+    }
+
+    triggerStackCreation() {
+        // Check if we're in a stack block context
+        const text = this.getPlainText();
+        const hasStackBlock = /(seq|group):\s*[^\n\r]+[\n\r]+((?:\s*-\s*[^\n\r]+[\n\r]*)+)$/i.test(text);
+
+        if (hasStackBlock) {
+            // Add the "/" trigger at the end
+            const selection = window.getSelection();
+            const range = document.createRange();
+            range.selectNodeContents(this.planEditor);
+            range.collapse(false); // Move to end
+
+            // Insert "/" on a new line
+            const div = document.createElement('div');
+            div.textContent = '/';
+            range.insertNode(div);
+            range.setStartAfter(div);
+            range.collapse(true);
+
+            selection.removeAllRanges();
+            selection.addRange(range);
+
+            // Immediately trigger parsing (no debounce)
+            this.handlePlanInput();
+        }
+    }
+
+    // Undo functionality
+    addToUndoStack(action) {
+        console.log('Adding to undo stack:', action);
+        this.undoStack.push(action);
+        // Limit undo stack size
+        if (this.undoStack.length > this.maxUndoStack) {
+            this.undoStack.shift();
+        }
+        console.log('Undo stack now has', this.undoStack.length, 'items');
+    }
+
+    undo() {
+        console.log('Undo called, stack length:', this.undoStack.length);
+        if (this.undoStack.length === 0) {
+            console.log('Nothing to undo');
+            return;
+        }
+
+        const action = this.undoStack.pop();
+        console.log('Undoing action:', action);
+
+        switch (action.type) {
+            case 'createNote':
+                // Remove the note
+                this.notes = this.notes.filter(n => n.id !== action.data.noteId);
+                this.saveNotes();
+                this.render();
+                console.log('Undid note creation');
+                break;
+
+            case 'createStack':
+                // Remove the stack AND all notes that were created with it
+                const stack = this.stacks.find(s => s.id === action.data.stackId);
+                if (stack) {
+                    // Remove all notes that were part of this stack
+                    this.notes = this.notes.filter(n => !action.data.noteIds.includes(n.id));
+
+                    // Remove the stack
+                    this.stacks = this.stacks.filter(s => s.id !== action.data.stackId);
+                    this.saveNotes();
+                    this.saveStacks();
+                    this.render();
+                    console.log('Undid stack creation - removed stack and', action.data.noteIds.length, 'notes');
+                }
+                break;
+
+            case 'deleteNote':
+                // Restore the note
+                this.notes.push(action.data.note);
+                this.saveNotes();
+                this.render();
+                console.log('Undid note deletion');
+                break;
+
+            case 'completeNote':
+                // Restore the note
+                const note = this.notes.find(n => n.id === action.data.noteId);
+                if (note) {
+                    note.completed = false;
+                    this.saveNotes();
+                    this.render();
+                    console.log('Undid note completion');
+                }
+                break;
+        }
     }
 
     insertCheckbox() {
@@ -2847,14 +3010,202 @@ class NotesApp {
             cb.replaceWith(`- ${marker} `);
         });
 
+        // Convert <br> and <div> to newlines before extracting text
+        clone.querySelectorAll('br').forEach(br => br.replaceWith('\n'));
+        clone.querySelectorAll('div').forEach(div => {
+            const text = div.textContent;
+            div.replaceWith('\n' + text);
+        });
+
         return clone.textContent || clone.innerText || '';
+    }
+
+    handlePlanInputDebounced() {
+        // Clear existing timer
+        if (this.planInputDebounceTimer) {
+            clearTimeout(this.planInputDebounceTimer);
+        }
+
+        // Set new timer - wait 300ms after user stops typing
+        this.planInputDebounceTimer = setTimeout(() => {
+            this.handlePlanInput();
+        }, 300);
+
+        // Always save immediately (don't debounce auto-save)
+        this.savePlanText();
     }
 
     handlePlanInput() {
         // Get plain text for task parsing
         const text = this.getPlainText();
 
-        // Parse for task patterns: (task content time category)
+        // First, parse for stack blocks: seq:/group: with bullet list
+        // Example:
+        // seq: Mathe Homework
+        // - Task 1 30m --u2a
+        // - Task 2 45m --u2a
+        // /  <- trigger
+        // Pattern requires a "/" on its own line to trigger creation
+        const stackPattern = /(seq|group):\s*([^\n\r]+)[\n\r]+((?:\s*-\s*[^\n\r]+[\n\r]+)+)\s*\/\s*(?:[\n\r]|$)/gi;
+        const stackMatches = [...text.matchAll(stackPattern)];
+
+        if (stackMatches.length > 0) {
+            stackMatches.forEach(match => {
+                const fullMatch = match[0];
+                const stackType = match[1]; // 'seq' or 'group'
+                const stackTitle = match[2].trim();
+                const bulletLines = match[3];
+
+                // Check if already processed by looking for the [...] confirmation in HTML
+                const currentHTML = this.planEditor.innerHTML;
+                const escapedTitle = stackTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const checkPattern = new RegExp(`${stackType}:\\s*${escapedTitle}\\s*\\[`, 'i');
+                const alreadyProcessed = checkPattern.test(currentHTML);
+
+                if (!alreadyProcessed) {
+                    // Parse each bullet line as a task
+                    const bullets = bulletLines.split('\n').filter(line => line.trim().startsWith('-'));
+                    const createdNotes = [];
+
+                    bullets.forEach(bulletLine => {
+                        const taskContent = bulletLine.replace(/^\s*-\s*/, '').trim();
+                        if (!taskContent) return;
+
+                        // Parse using same logic as single tasks
+                        let content = taskContent;
+                        let category = null;
+                        let uClass = null;
+                        let timeMinutes = null;
+                        let priority = null;
+
+                        // Extract category - check for --u with class first
+                        const uCategoryMatch = content.match(/--u(2a|2b|2c|3a|3b|5)/);
+                        if (uCategoryMatch) {
+                            category = 'u';
+                            uClass = uCategoryMatch[1];
+                            content = content.replace(/--u(2a|2b|2c|3a|3b|5)/, '').trim();
+                        } else {
+                            const categoryMatch = content.match(/--([khp])/);
+                            if (categoryMatch) {
+                                category = categoryMatch[1];
+                                content = content.replace(/--[khp]/, '').trim();
+                            }
+                        }
+
+                        // Extract priority (!, !!, !!!)
+                        const priorityMatch = content.match(/(!{1,3})/);
+                        if (priorityMatch) {
+                            priority = priorityMatch[1];
+                            content = content.replace(/!{1,3}/, '').trim();
+                        }
+
+                        // Extract time (e.g., "30m")
+                        const timeMatch = content.match(/(\d+)m/);
+                        if (timeMatch) {
+                            timeMinutes = parseInt(timeMatch[1]);
+                            content = content.replace(/\d+m/, '').trim();
+                        }
+
+                        // Clean up extra whitespace
+                        content = content.replace(/\s+/g, ' ').trim();
+
+                        if (content) {
+                            const note = {
+                                id: Date.now() + Math.random(),
+                                content: content,
+                                timestamp: new Date().toISOString(),
+                                completed: false,
+                                stackId: null, // Will be set after stack creation
+                                category: category,
+                                uClass: uClass,
+                                timeMinutes: timeMinutes,
+                                focused: false,
+                                assignedDay: null,
+                                priority: priority
+                            };
+                            createdNotes.push(note);
+                        }
+                    });
+
+                    if (createdNotes.length > 0) {
+                        // Reverse the order so first task is on top
+                        // (rendering displays last note in array on top)
+                        createdNotes.reverse();
+
+                        // Create the stack
+                        const stack = {
+                            id: Date.now() + Math.random(),
+                            noteIds: createdNotes.map(n => n.id),
+                            type: stackType === 'seq' ? 'sequential' : 'group',
+                            title: stackTitle
+                        };
+
+                        // Set stackId for all notes
+                        createdNotes.forEach(note => {
+                            note.stackId = stack.id;
+                            this.notes.push(note);
+                            this.newlyCreatedNoteIds.add(note.id); // Track for animation
+                        });
+
+                        this.stacks.push(stack);
+                        this.saveNotes();
+                        this.saveStacks();
+                        this.render();
+
+                        // Add to undo stack
+                        this.addToUndoStack({
+                            type: 'createStack',
+                            data: {
+                                stackId: stack.id,
+                                noteIds: createdNotes.map(n => n.id)
+                            }
+                        });
+
+                        // Note: IDs stay in newlyCreatedNoteIds until user switches to board/kanban view
+
+                        // Replace entire block with green confirmation
+                        const stackSymbol = stackType === 'seq' ? '→' : '+';
+                        // Add a div wrapper and ensure text after it starts fresh (not green)
+                        const confirmation = `<div><span class="stack-created-animation" style="color: #2ecc71;">${stackType}: ${stackTitle} [${stackSymbol} ${createdNotes.length} Tasks] ✓</span></div><div><br></div>`;
+
+                        // Build a simple search pattern for the entire block in plain text
+                        // Then replace it in the HTML by finding and replacing the title + all bullets + /
+                        let currentHTML = this.planEditor.innerHTML;
+
+                        // Simple approach: replace the opening line, then remove all bullet lines and the /
+                        const titlePattern = new RegExp(`${stackType}:\\s*${stackTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i');
+                        currentHTML = currentHTML.replace(titlePattern, confirmation);
+
+                        // Remove the bullet lines and / marker from HTML
+                        bullets.forEach(bulletLine => {
+                            const taskContent = bulletLine.replace(/^\s*-\s*/, '').trim();
+                            const bulletPattern = new RegExp(`<div>\\s*-\\s*${taskContent.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}.*?</div>`, 'gi');
+                            currentHTML = currentHTML.replace(bulletPattern, '');
+                        });
+
+                        // Remove the / trigger
+                        currentHTML = currentHTML.replace(/<div>\s*\/\s*<\/div>/gi, '');
+                        currentHTML = currentHTML.replace(/<div>\s*\/<br><\/div>/gi, '');
+
+                        this.planEditor.innerHTML = currentHTML;
+
+                        // Move cursor to end
+                        const selection = window.getSelection();
+                        const range = document.createRange();
+                        range.selectNodeContents(this.planEditor);
+                        range.collapse(false);
+                        selection.removeAllRanges();
+                        selection.addRange(range);
+
+                        this.savePlanText();
+
+                        console.log('Stack created from plan:', stack, createdNotes);
+                    }
+                }
+            });
+        }
+
+        // Then parse for single task patterns: (task content time category)
         // Examples: (Meeting vorbereiten 30m --k), (Einkaufen 15m --p)
         const taskPattern = /\(([^)]+?)\)/g;
         const matches = [...text.matchAll(taskPattern)];
@@ -2923,13 +3274,25 @@ class NotesApp {
                         };
 
                         this.notes.push(note);
+                        this.newlyCreatedNoteIds.add(note.id); // Track for animation
+                        console.log('Created note with animation tracking:', note.id);
                         this.saveNotes();
                         this.render();
+
+                        // Add to undo stack
+                        this.addToUndoStack({
+                            type: 'createNote',
+                            data: {
+                                noteId: note.id
+                            }
+                        });
+
+                        // Note: ID stays in newlyCreatedNoteIds until user switches to board/kanban view
 
                         // Replace () with [] to mark as processed in HTML
                         const currentHTML = this.planEditor.innerHTML;
                         const escapedMatch = fullMatch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                        const newHTML = currentHTML.replace(new RegExp(escapedMatch), `<span style="color: #2ecc71;">[${innerContent}] ✓</span>&nbsp;`);
+                        const newHTML = currentHTML.replace(new RegExp(escapedMatch), `<span class="stack-created-animation" style="color: #2ecc71;">[${innerContent}] ✓</span>&nbsp;`);
                         this.planEditor.innerHTML = newHTML;
 
                         // Move cursor outside the green span
@@ -2947,9 +3310,6 @@ class NotesApp {
                 }
             });
         }
-
-        // Auto-save
-        this.savePlanText();
     }
 
     savePlanText() {
