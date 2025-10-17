@@ -72,6 +72,12 @@ seq: Stack Titel
 - Drag auf Karte → Stack
 - Typen: Group (+) = alle aktiv, Sequential (→) = nur Top aktiv
 - Stack Modal: Klick → ↑↓ Reorder, ⇢ Unstack
+- **Group Stack Unstacking**: Wenn Filter aktiv, zeigt Group-Stacks Karten individuell
+  - Jede Gruppe bekommt einzigartige Farbe als 12px linke Border
+  - 8 Farben-Palette (Light Blue, Green, Orange, Purple, Gold, Teal, Rose, Sky Blue)
+  - Farben werden automatisch zugewiesen, cycling bei >8 Gruppen
+  - Funktion: `assignGroupColors()` mapped Stack-IDs zu Farben
+  - Sequential-Stacks bleiben gestackt auch bei Filtern
 
 ### 6. Kanban
 - 8 Spalten: Unassigned + Mo-So
@@ -180,3 +186,6 @@ stacks = stacks.filter(s => s.noteIds.length > 0);
 - **Undo-System**: Simple Stack-basierte History reicht für 90% Use Cases
 - **newlyCreatedNoteIds Set**: Temporäres Tracking für Animations-State zwischen Views
 - **Opacity-Animationen** besser als Transform für subtile Effekte (weniger aufdringlich)
+- **Visuelle Gruppierungs-Indikatoren**: Border-basiert besser als SVG-Linien (clearer, einfacher)
+- **Dynamische Farb-Zuweisung**: JS-basiert statt CSS ermöglicht intelligente Color-Cycling
+- **Color Palette Design**: Farben müssen von Kategorie-Farben unterscheidbar sein
