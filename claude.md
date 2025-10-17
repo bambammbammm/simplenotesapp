@@ -72,12 +72,14 @@ seq: Stack Titel
 - Drag auf Karte → Stack
 - Typen: Group (+) = alle aktiv, Sequential (→) = nur Top aktiv
 - Stack Modal: Klick → ↑↓ Reorder, ⇢ Unstack
-- **Group Stack Unstacking**: Wenn Filter aktiv, zeigt Group-Stacks Karten individuell
-  - Jede Gruppe bekommt einzigartige Farbe als 12px linke Border
-  - 8 Farben-Palette (Light Blue, Green, Orange, Purple, Gold, Teal, Rose, Sky Blue)
-  - Farben werden automatisch zugewiesen, cycling bei >8 Gruppen
-  - Funktion: `assignGroupColors()` mapped Stack-IDs zu Farben
+- **Group Stack Unstacking (Board View)**: Wenn Filter aktiv, zeigt Group-Stacks Karten in dedizierten Zeilen
+  - Jede Gruppe bekommt eigene Zeilen (Row-basierte Gruppierung)
+  - Weißer gestrichelter Balken links (60px breit) mit vertikalem Gruppennamen
+  - Karten können auf mehrere Zeilen umbrechen, Balken erstreckt sich über gesamte Höhe
+  - Keine anderen Karten zwischen Gruppen-Zeilen
+  - CSS: `.group-row-wrapper` (full-width), `.group-row-sidebar` (dashed border), `.group-row-label` (vertical text)
   - Sequential-Stacks bleiben gestackt auch bei Filtern
+  - **Nur Board View**: In Kanban bleiben Gruppen normal (farbige Borders)
 
 ### 6. Kanban
 - 8 Spalten: Unassigned + Mo-So
@@ -186,6 +188,8 @@ stacks = stacks.filter(s => s.noteIds.length > 0);
 - **Undo-System**: Simple Stack-basierte History reicht für 90% Use Cases
 - **newlyCreatedNoteIds Set**: Temporäres Tracking für Animations-State zwischen Views
 - **Opacity-Animationen** besser als Transform für subtile Effekte (weniger aufdringlich)
-- **Visuelle Gruppierungs-Indikatoren**: Border-basiert besser als SVG-Linien (clearer, einfacher)
-- **Dynamische Farb-Zuweisung**: JS-basiert statt CSS ermöglicht intelligente Color-Cycling
-- **Color Palette Design**: Farben müssen von Kategorie-Farben unterscheidbar sein
+- **Visuelle Gruppierungs-Indikatoren**: Row-basierte Gruppierung besser als einzelne Borders oder SVG-Linien
+- **Grid-Layout Flexibilität**: Full-width Wrapper (`grid-column: 1 / -1`) + inneres Grid = flexible Zeilen-Gruppierung
+- **Vertikaler Text**: `writing-mode: vertical-rl` + `transform: rotate(180deg)` für lesbare vertikale Labels
+- **Dashed Borders**: Besser als solid/colored für subtile visuelle Trennung
+- **Dedicated Rows**: Keine gemischten Karten = klare Gruppierung, einfacher zu scannen

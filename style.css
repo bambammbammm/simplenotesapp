@@ -1420,9 +1420,44 @@ body {
     --card-color: #B19CD9;
 }
 
-/* Unstacked group indicator - color-coded left border (applied via JS) */
-.note-card[data-unstacked-group] {
-    padding-left: 4px; /* Compensate for border (16px - 12px) */
+/* Group row wrapper - dedicated rows for unstacked groups */
+.group-row-wrapper {
+    grid-column: 1 / -1; /* Span full width of parent grid */
+    display: flex;
+    gap: 0;
+    position: relative;
+    padding-left: 80px; /* Space for sidebar with group name */
+}
+
+.group-row-sidebar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 60px;
+    border-right: 2px dashed rgba(255, 255, 255, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.group-row-label {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    text-transform: uppercase;
+    letter-spacing: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.5);
+    white-space: nowrap;
+    user-select: none;
+}
+
+.group-row-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
 }
 
 @keyframes fadeIn {

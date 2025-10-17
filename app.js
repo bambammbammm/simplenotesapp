@@ -837,99 +837,106 @@ class NotesApp {
         }
     }
 
+    passesFilters(note) {
+        // If no filters active, all notes pass
+        if (this.activeFilters.size === 0) {
+            return true;
+        }
+
+        // For notes in sequential stacks, only consider the top card (last in noteIds array)
+        if (note.stackId) {
+            const stack = this.stacks.find(s => s.id === note.stackId);
+            if (stack && stack.type === 'sequential') {
+                // Only the last card in sequential stack is active (visually on top)
+                const isTopCard = stack.noteIds[stack.noteIds.length - 1] === note.id;
+                if (!isTopCard) {
+                    // Blocked cards are filtered out
+                    return false;
+                }
+            }
+        }
+
+        // Check category filters
+        const categoryFilters = ['category-k', 'category-h', 'category-p', 'category-u'];
+        const activeCategoryFilters = categoryFilters.filter(f => this.activeFilters.has(f));
+
+        if (activeCategoryFilters.length > 0) {
+            const matchesCategory = activeCategoryFilters.some(filter => {
+                const cat = filter.split('-')[1];
+                return note.category === cat;
+            });
+
+            if (!matchesCategory) return false;
+        }
+
+        // Check class filters (for --u category)
+        const classFilters = ['class-2a', 'class-2b', 'class-2c', 'class-3a', 'class-3b', 'class-5'];
+        const activeClassFilters = classFilters.filter(f => this.activeFilters.has(f));
+
+        if (activeClassFilters.length > 0) {
+            const matchesClass = activeClassFilters.some(filter => {
+                const cls = filter.split('-')[1];
+                return note.category === 'u' && note.uClass === cls;
+            });
+
+            if (!matchesClass) return false;
+        }
+
+        // Check time filters
+        const timeFilters = ['time-0-15', 'time-16-30', 'time-31-60', 'time-60+'];
+        const activeTimeFilters = timeFilters.filter(f => this.activeFilters.has(f));
+
+        if (activeTimeFilters.length > 0) {
+            const time = note.timeMinutes || 0;
+            const matchesTime = activeTimeFilters.some(filter => {
+                if (filter === 'time-0-15') return time > 0 && time <= 15;
+                if (filter === 'time-16-30') return time >= 16 && time <= 30;
+                if (filter === 'time-31-60') return time >= 31 && time <= 60;
+                if (filter === 'time-60+') return time > 60;
+                return false;
+            });
+
+            if (!matchesTime) return false;
+        }
+
+        // Check priority filters
+        const priorityFilters = ['priority-1', 'priority-2', 'priority-3'];
+        const activePriorityFilters = priorityFilters.filter(f => this.activeFilters.has(f));
+
+        if (activePriorityFilters.length > 0) {
+            const matchesPriority = activePriorityFilters.some(filter => {
+                if (filter === 'priority-1') return note.priority === '!';
+                if (filter === 'priority-2') return note.priority === '!!';
+                if (filter === 'priority-3') return note.priority === '!!!';
+                return false;
+            });
+
+            if (!matchesPriority) return false;
+        }
+
+        // Check day filters
+        const dayFilters = ['day-unassigned', 'day-monday', 'day-tuesday', 'day-wednesday', 'day-thursday', 'day-friday', 'day-saturday', 'day-sunday'];
+        const activeDayFilters = dayFilters.filter(f => this.activeFilters.has(f));
+
+        if (activeDayFilters.length > 0) {
+            const matchesDay = activeDayFilters.some(filter => {
+                const day = filter.split('-')[1];
+                if (day === 'unassigned') return !note.assignedDay;
+                return note.assignedDay === day;
+            });
+
+            if (!matchesDay) return false;
+        }
+
+        return true;
+    }
+
     getFilteredNotes() {
         if (this.activeFilters.size === 0) {
             return this.notes;
         }
 
-        return this.notes.filter(note => {
-            // For notes in sequential stacks, only consider the top card (last in noteIds array)
-            if (note.stackId) {
-                const stack = this.stacks.find(s => s.id === note.stackId);
-                if (stack && stack.type === 'sequential') {
-                    // Only the last card in sequential stack is active (visually on top)
-                    const isTopCard = stack.noteIds[stack.noteIds.length - 1] === note.id;
-                    if (!isTopCard) {
-                        // Blocked cards are filtered out
-                        return false;
-                    }
-                }
-            }
-
-            // Check category filters
-            const categoryFilters = ['category-k', 'category-h', 'category-p', 'category-u'];
-            const activeCategoryFilters = categoryFilters.filter(f => this.activeFilters.has(f));
-
-            if (activeCategoryFilters.length > 0) {
-                const matchesCategory = activeCategoryFilters.some(filter => {
-                    const cat = filter.split('-')[1];
-                    return note.category === cat;
-                });
-
-                if (!matchesCategory) return false;
-            }
-
-            // Check class filters (for --u category)
-            const classFilters = ['class-2a', 'class-2b', 'class-2c', 'class-3a', 'class-3b', 'class-5'];
-            const activeClassFilters = classFilters.filter(f => this.activeFilters.has(f));
-
-            if (activeClassFilters.length > 0) {
-                const matchesClass = activeClassFilters.some(filter => {
-                    const cls = filter.split('-')[1];
-                    return note.category === 'u' && note.uClass === cls;
-                });
-
-                if (!matchesClass) return false;
-            }
-
-            // Check time filters
-            const timeFilters = ['time-0-15', 'time-16-30', 'time-31-60', 'time-60+'];
-            const activeTimeFilters = timeFilters.filter(f => this.activeFilters.has(f));
-
-            if (activeTimeFilters.length > 0) {
-                const time = note.timeMinutes || 0;
-                const matchesTime = activeTimeFilters.some(filter => {
-                    if (filter === 'time-0-15') return time > 0 && time <= 15;
-                    if (filter === 'time-16-30') return time >= 16 && time <= 30;
-                    if (filter === 'time-31-60') return time >= 31 && time <= 60;
-                    if (filter === 'time-60+') return time > 60;
-                    return false;
-                });
-
-                if (!matchesTime) return false;
-            }
-
-            // Check priority filters
-            const priorityFilters = ['priority-1', 'priority-2', 'priority-3'];
-            const activePriorityFilters = priorityFilters.filter(f => this.activeFilters.has(f));
-
-            if (activePriorityFilters.length > 0) {
-                const matchesPriority = activePriorityFilters.some(filter => {
-                    if (filter === 'priority-1') return note.priority === '!';
-                    if (filter === 'priority-2') return note.priority === '!!';
-                    if (filter === 'priority-3') return note.priority === '!!!';
-                    return false;
-                });
-
-                if (!matchesPriority) return false;
-            }
-
-            // Check day filters
-            const dayFilters = ['day-unassigned', 'day-monday', 'day-tuesday', 'day-wednesday', 'day-thursday', 'day-friday', 'day-saturday', 'day-sunday'];
-            const activeDayFilters = dayFilters.filter(f => this.activeFilters.has(f));
-
-            if (activeDayFilters.length > 0) {
-                const matchesDay = activeDayFilters.some(filter => {
-                    const day = filter.split('-')[1];
-                    if (day === 'unassigned') return !note.assignedDay;
-                    return note.assignedDay === day;
-                });
-
-                if (!matchesDay) return false;
-            }
-
-            return true;
-        });
+        return this.notes.filter(note => this.passesFilters(note));
     }
 
     enterEditMode(id) {
@@ -1582,20 +1589,37 @@ class NotesApp {
                 .filter(n => n && filteredIds.has(n.id)); // Only include filtered notes
 
             if (stackNotes.length > 0) {
-                // If filters are active AND stack is a group type, render notes individually
+                // If filters are active AND stack is a group type, render notes in dedicated rows
                 if (this.activeFilters.size > 0 && stack.type === 'group') {
-                    // Render each note separately when filters are active for group stacks
+                    // Create a wrapper container for this group with sidebar
+                    const groupWrapper = document.createElement('div');
+                    groupWrapper.className = 'group-row-wrapper';
+                    groupWrapper.dataset.stackId = stack.id;
+
+                    // Create sidebar with dashed border and group name
+                    const sidebar = document.createElement('div');
+                    sidebar.className = 'group-row-sidebar';
+
+                    const label = document.createElement('div');
+                    label.className = 'group-row-label';
+                    label.textContent = stack.title || 'Gruppe';
+
+                    sidebar.appendChild(label);
+                    groupWrapper.appendChild(sidebar);
+
+                    // Create inner grid container for the cards
+                    const groupGrid = document.createElement('div');
+                    groupGrid.className = 'group-row-grid';
+
+                    // Render each note as card in this group's grid
                     stackNotes.forEach(note => {
                         const noteCard = this.createNoteCard(note);
-                        // Mark card as part of unstacked group for visual connection
-                        noteCard.dataset.unstackedGroup = stack.id;
-                        // Apply unique color to this group
-                        if (groupColors[stack.id]) {
-                            noteCard.style.borderLeft = `12px solid ${groupColors[stack.id]}`;
-                        }
-                        this.notesCanvas.appendChild(noteCard);
+                        groupGrid.appendChild(noteCard);
                         renderedNotes.add(note.id);
                     });
+
+                    groupWrapper.appendChild(groupGrid);
+                    this.notesCanvas.appendChild(groupWrapper);
                 } else {
                     // Render as stack (normal behavior for sequential stacks or when no filters)
                     const stackContainer = this.createStackContainer(stack, stackNotes);
