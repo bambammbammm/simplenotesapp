@@ -49,6 +49,13 @@ class NotesApp {
         this.hamburgerMenuBtn = document.getElementById('hamburgerMenuBtn');
         this.hamburgerDropdown = document.getElementById('hamburgerDropdown');
 
+        // Undo dropdown
+        this.undoBtn = document.getElementById('undoBtn');
+        this.undoCount = document.querySelector('.undo-count');
+        this.undoDropdown = document.getElementById('undoDropdown');
+        this.undoDropdownClose = document.getElementById('undoDropdownClose');
+        this.undoHistoryList = document.getElementById('undoHistoryList');
+
         // Work Timer
         this.workSidebar = document.getElementById('workSidebar');
         this.workTimeTotal = document.getElementById('workTimeTotal');
@@ -73,7 +80,9 @@ class NotesApp {
             intervalId: null,
             startTime: null,
             endTime: null,
-            initialPlannedMinutes: 0
+            initialPlannedMinutes: 0,
+            pauseStartTime: null,  // When current pause started
+            totalPausedMs: 0        // Total time paused in milliseconds
         };
 
         // Filters
@@ -121,8 +130,6 @@ class NotesApp {
         this.completedCounterElement = document.getElementById('completedCounter');
 
         // Undo functionality
-        this.undoHistory = null; // Stores the last state for undo
-
         this.init();
     }
 
@@ -134,6 +141,9 @@ class NotesApp {
         this.loadPlanText();
         this.loadSavedNotes();
         this.checkAndResetCounter();
+
+        // Initialize undo button state
+        this.updateUndoButton();
 
         // Event listeners
         this.noteInput.addEventListener('keydown', (e) => this.handleKeyDown(e));
@@ -206,6 +216,16 @@ class NotesApp {
         this.stopBtn.addEventListener('click', () => this.stopWork());
         this.sessionSummaryClose.addEventListener('click', () => this.closeSessionSummary());
 
+        // Undo dropdown event listeners
+        this.undoBtn.addEventListener('click', () => this.toggleUndoDropdown());
+        this.undoDropdownClose.addEventListener('click', () => this.closeUndoDropdown());
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!this.undoBtn.contains(e.target) && !this.undoDropdown.contains(e.target)) {
+                this.closeUndoDropdown();
+            }
+        });
+
         // Global keyboard shortcuts
         document.addEventListener('keydown', (e) => {
             const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
@@ -213,15 +233,22 @@ class NotesApp {
 
             // Undo: Cmd/Ctrl + Z (global)
             if (cmdOrCtrl && e.key === 'z' && !e.shiftKey) {
-                // Don't trigger if user is typing in an input/textarea (except plan editor)
                 const target = e.target;
-                const isEditable = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' ||
-                                  (target.contentEditable === 'true' && target.id !== 'planEditor');
 
-                if (!isEditable) {
-                    e.preventDefault();
-                    this.undo();
+                // Allow native undo in Plan Editor (contenteditable)
+                if (target.id === 'planEditor') {
+                    return; // Let browser handle native text undo
                 }
+
+                // Allow native undo in regular input/textarea fields
+                const isTypingField = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
+                if (isTypingField) {
+                    return; // Let browser handle native text undo
+                }
+
+                // For everything else (clicking on canvas, notes, etc.), trigger task undo
+                e.preventDefault();
+                this.undo();
             }
         });
 
@@ -377,10 +404,21 @@ class NotesApp {
         this.saveNotes();
         this.noteInput.value = '';
         this.render();
+
+        // Add to undo stack
+        this.addToUndoStack({
+            type: 'createNote',
+            data: {
+                noteId: note.id
+            }
+        });
     }
 
     deleteNote(id, skipAnimation = false) {
         if (skipAnimation) {
+            // Save note for undo BEFORE deleting
+            const noteToDelete = this.notes.find(note => note.id === id);
+
             this.notes = this.notes.filter(note => note.id !== id);
 
             // Also remove from stacks
@@ -394,10 +432,17 @@ class NotesApp {
             this.saveNotes();
             this.saveStacks();
             this.render();
-        } else {
-            // Save state for undo BEFORE making changes
-            this.saveStateForUndo();
 
+            // Add to undo stack
+            if (noteToDelete) {
+                this.addToUndoStack({
+                    type: 'deleteNote',
+                    data: {
+                        note: noteToDelete
+                    }
+                });
+            }
+        } else {
             // Find the card element and animate it
             const cardElement = document.querySelector(`[data-note-id="${id}"]`);
             if (cardElement) {
@@ -416,8 +461,8 @@ class NotesApp {
             const wasFocused = note.focused === true;
             const timerWasRunning = this.timerState.isRunning;
 
-            // Save state for undo BEFORE making changes
-            this.saveStateForUndo();
+            // Save note for undo BEFORE deleting
+            const noteToComplete = { ...note };
 
             // Find the card element and animate it
             const cardElement = document.querySelector(`[data-note-id="${id}"]`);
@@ -447,6 +492,15 @@ class NotesApp {
                     if (timerWasRunning && wasFocused) {
                         this.recalculateTimer();
                     }
+
+                    // Add to undo stack
+                    this.addToUndoStack({
+                        type: 'completeNote',
+                        data: {
+                            noteId: noteToComplete.id,
+                            note: noteToComplete
+                        }
+                    });
                 }, 300);
             }
         }
@@ -512,14 +566,15 @@ class NotesApp {
         }
 
         // Initialize timer with start and end time
-        const now = new Date();
+        const now = Date.now();
         this.timerState.isRunning = true;
         this.timerState.isPaused = false;
         this.timerState.totalSeconds = totalMinutes * 60;
-        this.timerState.remainingSeconds = totalMinutes * 60;
         this.timerState.startTime = now;
-        this.timerState.endTime = new Date(now.getTime() + totalMinutes * 60 * 1000);
+        this.timerState.endTime = now + (totalMinutes * 60 * 1000);
         this.timerState.initialPlannedMinutes = totalMinutes; // Save initial planned time
+        this.timerState.pauseStartTime = null;
+        this.timerState.totalPausedMs = 0;
 
         // Hide session summary if still visible
         this.sessionSummary.style.display = 'none';
@@ -533,17 +588,26 @@ class NotesApp {
         this.endTimeDisplay.style.display = 'flex';
         this.updateEndTimeDisplay();
 
-        // Start countdown
+        // Start countdown - uses real time calculation
         this.timerState.intervalId = setInterval(() => {
             if (!this.timerState.isPaused) {
-                this.timerState.remainingSeconds--;
+                // Calculate remaining time based on actual clock time
+                const now = Date.now();
+                const elapsed = now - this.timerState.startTime - this.timerState.totalPausedMs;
+                const totalDuration = this.timerState.totalSeconds * 1000;
+                const remaining = totalDuration - elapsed;
 
-                if (this.timerState.remainingSeconds <= 0) {
+                if (remaining <= 0) {
                     // Timer finished naturally
+                    this.timerState.remainingSeconds = 0;
                     this.showSessionSummary(true);
                 } else {
+                    this.timerState.remainingSeconds = Math.ceil(remaining / 1000);
                     this.updateTimerDisplay();
                 }
+            } else {
+                // Update end time display during pause
+                this.updateEndTimeDisplay();
             }
         }, 1000);
 
@@ -556,10 +620,21 @@ class NotesApp {
         this.timerState.isPaused = !this.timerState.isPaused;
 
         if (this.timerState.isPaused) {
+            // Starting pause - record when it started
+            this.timerState.pauseStartTime = Date.now();
             this.pauseBtn.textContent = '▸ Resume';
         } else {
+            // Ending pause - add to total paused time
+            if (this.timerState.pauseStartTime) {
+                const pauseDuration = Date.now() - this.timerState.pauseStartTime;
+                this.timerState.totalPausedMs += pauseDuration;
+                this.timerState.pauseStartTime = null;
+            }
             this.pauseBtn.textContent = '‖ Pause';
         }
+
+        // Update end time display to reflect pause
+        this.updateEndTimeDisplay();
     }
 
     stopWork() {
@@ -575,6 +650,8 @@ class NotesApp {
         this.timerState.remainingSeconds = 0;
         this.timerState.startTime = null;
         this.timerState.endTime = null;
+        this.timerState.pauseStartTime = null;
+        this.timerState.totalPausedMs = 0;
 
         // Update UI
         this.startWorkBtn.style.display = 'block';
@@ -598,10 +675,18 @@ class NotesApp {
     }
 
     updateEndTimeDisplay() {
-        if (!this.timerState.endTime) return;
+        if (!this.timerState.startTime) return;
 
-        const hours = this.timerState.endTime.getHours();
-        const minutes = this.timerState.endTime.getMinutes();
+        // Calculate actual end time including paused time
+        const totalDuration = this.timerState.totalSeconds * 1000;
+        const currentPausedTime = this.timerState.isPaused && this.timerState.pauseStartTime
+            ? Date.now() - this.timerState.pauseStartTime
+            : 0;
+        const totalPaused = this.timerState.totalPausedMs + currentPausedTime;
+        const actualEndTime = new Date(this.timerState.startTime + totalDuration + totalPaused);
+
+        const hours = actualEndTime.getHours();
+        const minutes = actualEndTime.getMinutes();
 
         const formatted = [
             hours.toString().padStart(2, '0'),
@@ -968,10 +1053,8 @@ class NotesApp {
              note._originalPriority !== note.priority ||
              note._originalTime !== note.timeMinutes);
 
-        if (hasChanged) {
-            // Save state for undo BEFORE making changes
-            this.saveStateForUndo();
-        }
+        // Note: Edit operations currently don't support undo
+        // to keep the undo system focused on create/delete/complete operations
 
         // Parse content using same logic as addNote
         // Check for category tags FIRST (e.g., --k, --h, --p, --u2a, --u3b, etc.)
@@ -1409,6 +1492,46 @@ class NotesApp {
         }
     }
 
+    assignGroupColors() {
+        // Color palette for group indicators
+        // Avoiding category colors: #7FDBDA (turquoise), #FFD966 (yellow), #FF69B4 (pink), #B19CD9 (purple)
+        const colorPalette = [
+            'rgba(100, 180, 255, 0.8)',    // Light blue
+            'rgba(150, 220, 150, 0.8)',    // Light green
+            'rgba(255, 150, 100, 0.8)',    // Light orange
+            'rgba(200, 150, 255, 0.8)',    // Light purple
+            'rgba(255, 200, 100, 0.8)',    // Light gold
+            'rgba(100, 200, 200, 0.8)',    // Teal
+            'rgba(255, 150, 200, 0.8)',    // Light rose
+            'rgba(150, 200, 255, 0.8)',    // Sky blue
+        ];
+
+        // Find all group stacks that will be unstacked (filters active + type === 'group')
+        const groupColors = {};
+        let colorIndex = 0;
+
+        if (this.activeFilters.size > 0) {
+            this.stacks.forEach(stack => {
+                if (stack.type === 'group') {
+                    // Check if any notes in this stack pass the filters
+                    const stackNotes = stack.noteIds
+                        .map(id => this.notes.find(n => n.id === id))
+                        .filter(note => note);
+
+                    const filteredStackNotes = stackNotes.filter(note => this.passesFilters(note));
+
+                    if (filteredStackNotes.length > 0) {
+                        // Assign color from palette, cycling if needed
+                        groupColors[stack.id] = colorPalette[colorIndex % colorPalette.length];
+                        colorIndex++;
+                    }
+                }
+            });
+        }
+
+        return groupColors;
+    }
+
     renderBoard() {
         // Get filtered notes
         const filteredNotes = this.getFilteredNotes();
@@ -1449,6 +1572,9 @@ class NotesApp {
         // Group notes by stacks
         const renderedNotes = new Set();
 
+        // Assign colors to unstacked groups
+        const groupColors = this.assignGroupColors();
+
         // Render stacks first (only if they contain filtered notes)
         this.stacks.forEach(stack => {
             const stackNotes = stack.noteIds
@@ -1456,9 +1582,26 @@ class NotesApp {
                 .filter(n => n && filteredIds.has(n.id)); // Only include filtered notes
 
             if (stackNotes.length > 0) {
-                const stackContainer = this.createStackContainer(stack, stackNotes);
-                this.notesCanvas.appendChild(stackContainer);
-                stackNotes.forEach(note => renderedNotes.add(note.id));
+                // If filters are active AND stack is a group type, render notes individually
+                if (this.activeFilters.size > 0 && stack.type === 'group') {
+                    // Render each note separately when filters are active for group stacks
+                    stackNotes.forEach(note => {
+                        const noteCard = this.createNoteCard(note);
+                        // Mark card as part of unstacked group for visual connection
+                        noteCard.dataset.unstackedGroup = stack.id;
+                        // Apply unique color to this group
+                        if (groupColors[stack.id]) {
+                            noteCard.style.borderLeft = `12px solid ${groupColors[stack.id]}`;
+                        }
+                        this.notesCanvas.appendChild(noteCard);
+                        renderedNotes.add(note.id);
+                    });
+                } else {
+                    // Render as stack (normal behavior for sequential stacks or when no filters)
+                    const stackContainer = this.createStackContainer(stack, stackNotes);
+                    this.notesCanvas.appendChild(stackContainer);
+                    stackNotes.forEach(note => renderedNotes.add(note.id));
+                }
             }
         });
 
@@ -1469,6 +1612,7 @@ class NotesApp {
                 this.notesCanvas.appendChild(noteCard);
             }
         });
+
     }
 
     renderKanban() {
@@ -1482,6 +1626,9 @@ class NotesApp {
         // Get filtered notes (excluding day filters for Kanban)
         const filteredNotes = this.getFilteredNotesForKanban();
         const filteredIds = new Set(filteredNotes.map(n => n.id));
+
+        // Assign colors to unstacked groups
+        const groupColors = this.assignGroupColors();
 
         const days = ['unassigned', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
@@ -1566,10 +1713,26 @@ class NotesApp {
                 });
 
                 if (allNotesInDay && stackNotes.length > 0) {
-                    // Render stack container
-                    const stackContainer = this.createKanbanStackContainer(stack, stackNotes);
-                    columnBody.appendChild(stackContainer);
-                    stackNotes.forEach(note => renderedNotes.add(note.id));
+                    // If filters are active AND stack is a group type, render notes individually
+                    if (this.activeFilters.size > 0 && stack.type === 'group') {
+                        // Render each note separately when filters are active for group stacks
+                        stackNotes.forEach(note => {
+                            const noteCard = this.createNoteCard(note, null, 1, null, null, true); // isKanban=true
+                            // Mark card as part of unstacked group for visual connection
+                            noteCard.dataset.unstackedGroup = stack.id;
+                            // Apply unique color to this group
+                            if (groupColors[stack.id]) {
+                                noteCard.style.borderLeft = `12px solid ${groupColors[stack.id]}`;
+                            }
+                            columnBody.appendChild(noteCard);
+                            renderedNotes.add(note.id);
+                        });
+                    } else {
+                        // Render stack container (normal behavior for sequential or no filters)
+                        const stackContainer = this.createKanbanStackContainer(stack, stackNotes);
+                        columnBody.appendChild(stackContainer);
+                        stackNotes.forEach(note => renderedNotes.add(note.id));
+                    }
                 }
             });
 
@@ -1581,6 +1744,7 @@ class NotesApp {
                 }
             });
         });
+
     }
 
     getFilteredNotesForKanban() {
@@ -1792,6 +1956,7 @@ class NotesApp {
         this.saveNotes();
         this.render();
     }
+
 
     updateTimeStats() {
         // Calculate time for each category
@@ -2249,8 +2414,7 @@ class NotesApp {
         const currentIndex = stack.noteIds.indexOf(noteId);
         if (currentIndex <= 0) return; // Already at top or not found
 
-        // Save state for undo
-        this.saveStateForUndo();
+        // Note: Reorder/unstack operations currently don't support undo
 
         // Swap with previous card
         [stack.noteIds[currentIndex - 1], stack.noteIds[currentIndex]] =
@@ -2269,8 +2433,7 @@ class NotesApp {
         const currentIndex = stack.noteIds.indexOf(noteId);
         if (currentIndex === -1 || currentIndex >= stack.noteIds.length - 1) return; // Already at bottom or not found
 
-        // Save state for undo
-        this.saveStateForUndo();
+        // Note: Reorder/unstack operations currently don't support undo
 
         // Swap with next card
         [stack.noteIds[currentIndex], stack.noteIds[currentIndex + 1]] =
@@ -2284,8 +2447,7 @@ class NotesApp {
         const note = this.notes.find(n => n.id === noteId);
         if (!note || !note.stackId) return;
 
-        // Save state for undo
-        this.saveStateForUndo();
+        // Note: Reorder/unstack operations currently don't support undo
 
         const stackId = note.stackId;
         const stack = this.stacks.find(s => s.id === stackId);
@@ -2440,10 +2602,8 @@ class NotesApp {
              note._originalPriority !== note.priority ||
              note._originalTime !== note.timeMinutes);
 
-        if (hasChanged) {
-            // Save state for undo BEFORE making changes
-            this.saveStateForUndo();
-        }
+        // Note: Edit operations currently don't support undo
+        // to keep the undo system focused on create/delete/complete operations
 
         // Parse content using same logic as addNote
         let category = null;
@@ -2538,38 +2698,7 @@ class NotesApp {
 
     // ========== Undo Functionality ==========
 
-    saveStateForUndo() {
-        // Save current state (deep copy)
-        this.undoHistory = {
-            notes: JSON.parse(JSON.stringify(this.notes)),
-            stacks: JSON.parse(JSON.stringify(this.stacks)),
-            completedToday: this.completedToday
-        };
-    }
-
-    undo() {
-        if (!this.undoHistory) {
-            console.log('Kein Undo verfügbar');
-            return;
-        }
-
-        // Restore previous state
-        this.notes = this.undoHistory.notes;
-        this.stacks = this.undoHistory.stacks;
-        this.completedToday = this.undoHistory.completedToday;
-
-        // Clear undo history (only one level)
-        this.undoHistory = null;
-
-        // Save and render
-        this.saveNotes();
-        this.saveStacks();
-        this.saveCompletedCounter();
-        this.updateCompletedCounter();
-        this.render();
-
-        console.log('Undo ausgeführt');
-    }
+    // Old undo system removed - now using undoStack system with multi-step support
 
     // ========== Backup System ==========
 
@@ -2882,10 +3011,12 @@ class NotesApp {
             return;
         }
 
-        // Undo: Cmd/Ctrl + Z
+        // Undo/Redo: Cmd/Ctrl + Z/Shift+Z
+        // In Plan View, we want native contenteditable undo/redo for text
+        // So we DON'T prevent default here - let browser handle it
         if (cmdOrCtrl && e.key === 'z') {
-            e.preventDefault();
-            this.undo();
+            // Let browser's native undo work for text editing
+            // Don't call this.undo() which is for task management
             return;
         }
     }
@@ -2920,12 +3051,44 @@ class NotesApp {
     // Undo functionality
     addToUndoStack(action) {
         console.log('Adding to undo stack:', action);
+
+        // Add timestamp and description
+        action.timestamp = Date.now();
+        action.description = this.getUndoDescription(action);
+
         this.undoStack.push(action);
         // Limit undo stack size
         if (this.undoStack.length > this.maxUndoStack) {
             this.undoStack.shift();
         }
         console.log('Undo stack now has', this.undoStack.length, 'items');
+
+        // Update undo button state
+        this.updateUndoButton();
+    }
+
+    getUndoDescription(action) {
+        switch (action.type) {
+            case 'createNote':
+                const note = this.notes.find(n => n.id === action.data.noteId);
+                const content = note ? note.content.substring(0, 30) : 'Note';
+                return `Note erstellt: ${content}${note && note.content.length > 30 ? '...' : ''}`;
+
+            case 'createStack':
+                return `Stack erstellt (${action.data.noteIds.length} Tasks)`;
+
+            case 'deleteNote':
+                const deletedContent = action.data.note.content.substring(0, 30);
+                return `Note gelöscht: ${deletedContent}${action.data.note.content.length > 30 ? '...' : ''}`;
+
+            case 'completeNote':
+                const completedNote = this.notes.find(n => n.id === action.data.noteId);
+                const completedContent = completedNote ? completedNote.content.substring(0, 30) : 'Note';
+                return `Note abgeschlossen: ${completedContent}${completedNote && completedNote.content.length > 30 ? '...' : ''}`;
+
+            default:
+                return 'Aktion';
+        }
     }
 
     undo() {
@@ -2972,16 +3135,151 @@ class NotesApp {
                 break;
 
             case 'completeNote':
-                // Restore the note
-                const note = this.notes.find(n => n.id === action.data.noteId);
-                if (note) {
-                    note.completed = false;
+                // Restore the note (it was deleted when completed)
+                if (action.data.note) {
+                    this.notes.push(action.data.note);
+                    // Decrement completed counter
+                    if (this.completedToday > 0) {
+                        this.completedToday--;
+                        this.saveCompletedCounter();
+                        this.updateCompletedCounter();
+                    }
                     this.saveNotes();
                     this.render();
                     console.log('Undid note completion');
                 }
                 break;
         }
+
+        // Update button state and close dropdown
+        this.updateUndoButton();
+        this.closeUndoDropdown();
+    }
+
+    updateUndoButton() {
+        const count = this.undoStack.length;
+        this.undoCount.textContent = count;
+        this.undoBtn.disabled = count === 0;
+    }
+
+    toggleUndoDropdown() {
+        if (this.undoStack.length === 0) return;
+
+        const isVisible = this.undoDropdown.style.display === 'block';
+
+        if (isVisible) {
+            this.closeUndoDropdown();
+        } else {
+            this.renderUndoHistory();
+            this.undoDropdown.style.display = 'block';
+        }
+    }
+
+    closeUndoDropdown() {
+        this.undoDropdown.style.display = 'none';
+    }
+
+    renderUndoHistory() {
+        this.undoHistoryList.innerHTML = '';
+
+        if (this.undoStack.length === 0) {
+            this.undoHistoryList.innerHTML = '<div style="padding: 12px; text-align: center; color: #666;">Keine Aktionen</div>';
+            return;
+        }
+
+        // Show stack in reverse order (most recent first)
+        const reversedStack = [...this.undoStack].reverse();
+
+        reversedStack.forEach((action, reverseIndex) => {
+            const stackIndex = this.undoStack.length - 1 - reverseIndex;
+            const item = document.createElement('div');
+            item.className = 'undo-history-item';
+            item.dataset.index = stackIndex;
+
+            // Get icon based on action type
+            let icon = '↶';
+            switch (action.type) {
+                case 'createNote': icon = '+'; break;
+                case 'createStack': icon = '⊞'; break;
+                case 'deleteNote': icon = '×'; break;
+                case 'completeNote': icon = '○'; break;
+            }
+
+            // Format timestamp
+            const timeAgo = this.getTimeAgo(action.timestamp);
+
+            item.innerHTML = `
+                <span class="undo-history-icon">${icon}</span>
+                <span class="undo-history-text">${action.description}</span>
+                <span class="undo-history-time">${timeAgo}</span>
+            `;
+
+            item.addEventListener('click', () => this.undoMultipleSteps(stackIndex));
+
+            this.undoHistoryList.appendChild(item);
+        });
+    }
+
+    undoMultipleSteps(targetIndex) {
+        // Undo all actions from the end up to and including targetIndex
+        const stepsToUndo = this.undoStack.length - targetIndex;
+
+        for (let i = 0; i < stepsToUndo; i++) {
+            if (this.undoStack.length > 0) {
+                // Call undo without closing dropdown yet
+                const action = this.undoStack.pop();
+
+                switch (action.type) {
+                    case 'createNote':
+                        this.notes = this.notes.filter(n => n.id !== action.data.noteId);
+                        break;
+
+                    case 'createStack':
+                        const stack = this.stacks.find(s => s.id === action.data.stackId);
+                        if (stack) {
+                            this.notes = this.notes.filter(n => !action.data.noteIds.includes(n.id));
+                            this.stacks = this.stacks.filter(s => s.id !== action.data.stackId);
+                        }
+                        break;
+
+                    case 'deleteNote':
+                        this.notes.push(action.data.note);
+                        break;
+
+                    case 'completeNote':
+                        if (action.data.note) {
+                            this.notes.push(action.data.note);
+                            // Decrement completed counter
+                            if (this.completedToday > 0) {
+                                this.completedToday--;
+                            }
+                        }
+                        break;
+                }
+            }
+        }
+
+        // Save and render once after all undos
+        this.saveNotes();
+        this.saveStacks();
+        this.saveCompletedCounter();
+        this.updateCompletedCounter();
+        this.render();
+
+        // Update button and close dropdown
+        this.updateUndoButton();
+        this.closeUndoDropdown();
+
+        console.log(`Undid ${stepsToUndo} steps`);
+    }
+
+    getTimeAgo(timestamp) {
+        const seconds = Math.floor((Date.now() - timestamp) / 1000);
+
+        if (seconds < 60) return 'gerade eben';
+        if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
+        if (seconds < 86400) return `${Math.floor(seconds / 3600)}h`;
+        return `${Math.floor(seconds / 86400)}d`;
     }
 
     insertCheckbox() {
@@ -3582,7 +3880,7 @@ class NotesApp {
                 description: 'Letzte Aktion rückgängig machen',
                 icon: '↺',
                 action: () => this.undo(),
-                condition: () => this.undoHistory !== null
+                condition: () => this.undoStack.length > 0
             }
         ];
 

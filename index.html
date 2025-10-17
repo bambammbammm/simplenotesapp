@@ -7,8 +7,8 @@
     <meta name="theme-color" content="#0f0f0f">
     <title>Simple Notes App</title>
     <link rel="icon" type="image/png" href="icon-192.png">
-    <link rel="manifest" href="manifest.json?v=4">
-    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json?v=10">
+    <link rel="stylesheet" href="style.css?v=10">
 </head>
 <body>
     <div class="app-container">
@@ -87,6 +87,22 @@
                 <div class="header-center">
                 </div>
                 <div class="header-right">
+                    <div class="undo-container">
+                        <button class="undo-btn" id="undoBtn" title="Rückgängig (Cmd+Z)" disabled>
+                            <span class="undo-icon">↶</span>
+                            <span class="undo-count">0</span>
+                        </button>
+                        <!-- Undo History Dropdown -->
+                        <div class="undo-dropdown" id="undoDropdown" style="display: none;">
+                            <div class="undo-dropdown-header">
+                                <span class="undo-dropdown-title">Verlauf</span>
+                                <button class="undo-dropdown-close" id="undoDropdownClose">×</button>
+                            </div>
+                            <div class="undo-history-list" id="undoHistoryList">
+                                <!-- History items will be inserted here -->
+                            </div>
+                        </div>
+                    </div>
                     <button class="view-switch-btn" id="viewSwitchBtn" title="Ansicht wechseln (Board ↔ Kanban)">
                         <span class="view-icon">⊞</span>
                         <span class="view-label">Kanban</span>
@@ -352,7 +368,7 @@ Tipp: Schreiben Sie (Task-Name 30m --k) um automatisch eine Aufgabe zu erstellen
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <script src="app.js?v=10"></script>
     <script>
         // Register Service Worker for PWA
         if ('serviceWorker' in navigator) {
