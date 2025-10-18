@@ -1543,15 +1543,18 @@ class NotesApp {
             this.kanbanView.style.display = 'flex';
             this.viewSwitchBtn.querySelector('.view-icon').textContent = '✎';
             this.viewSwitchBtn.querySelector('.view-label').textContent = 'Plan';
+            document.body.classList.remove('zen-mode'); // Remove zen mode
         } else if (this.currentView === 'plan') {
             this.planView.style.display = 'flex';
             this.viewSwitchBtn.querySelector('.view-icon').textContent = '⊟';
             this.viewSwitchBtn.querySelector('.view-label').textContent = 'Board';
             setTimeout(() => this.planEditor.focus(), 100);
+            document.body.classList.add('zen-mode'); // Add zen mode for Plan view
         } else {
             this.notesCanvas.style.display = 'grid';
             this.viewSwitchBtn.querySelector('.view-icon').textContent = '⊞';
             this.viewSwitchBtn.querySelector('.view-label').textContent = 'Kanban';
+            document.body.classList.remove('zen-mode'); // Remove zen mode
         }
 
         this.render();
