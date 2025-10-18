@@ -758,6 +758,8 @@ class NotesApp {
     }
 
     showSessionSummary(timerRanOut) {
+        console.log('showSessionSummary called, timerRanOut:', timerRanOut);
+
         // Calculate actual time elapsed
         const now = new Date();
         const elapsedMs = now.getTime() - this.timerState.startTime.getTime();
@@ -765,6 +767,8 @@ class NotesApp {
 
         const plannedMinutes = this.timerState.initialPlannedMinutes;
         const differenceMinutes = plannedMinutes - actualMinutes;
+
+        console.log('Session stats - Planned:', plannedMinutes, 'Actual:', actualMinutes, 'Difference:', differenceMinutes);
 
         // Save session data to localStorage
         const sessionData = {
@@ -815,7 +819,13 @@ class NotesApp {
         }
 
         // Show summary modal
-        this.sessionSummary.style.display = 'flex';
+        console.log('Showing session summary modal, element:', this.sessionSummary);
+        if (this.sessionSummary) {
+            this.sessionSummary.style.display = 'flex';
+            console.log('Modal display set to flex');
+        } else {
+            console.error('sessionSummary element not found!');
+        }
 
         // Update header display
         this.updateTimeStats();
