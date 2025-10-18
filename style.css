@@ -1659,12 +1659,13 @@ body {
 }
 
 /* Zen Mode: Hide everything except editor and essential buttons */
-.plan-view .saved-notes-sidebar {
-    display: none; /* Always hide sidebar in Plan View for zen mode */
+/* Activated when body has .zen-mode class (Plan View) */
+body.zen-mode .app-header {
+    display: none !important;
 }
 
-.plan-view header {
-    display: none; /* Hide top header in Plan View */
+body.zen-mode .saved-notes-sidebar {
+    display: none !important;
 }
 
 /* Saved Notes Sidebar */
