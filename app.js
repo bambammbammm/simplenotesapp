@@ -2144,15 +2144,18 @@ class NotesApp {
                 const sessionData = JSON.parse(sessionDataStr);
                 const differenceMinutes = sessionData.differenceMinutes;
 
-                if (differenceMinutes > 0) {
-                    // Faster than planned - green
-                    html += `<div class="time-stat session-stat faster"><span class="time-stat-label">Gespart:</span><span class="time-stat-value">+${differenceMinutes}m</span></div>`;
-                } else if (differenceMinutes < 0) {
-                    // Slower than planned - red
-                    html += `<div class="time-stat session-stat slower"><span class="time-stat-label">Mehr:</span><span class="time-stat-value">${differenceMinutes}m</span></div>`;
-                } else {
-                    // Exact - blue
-                    html += `<div class="time-stat session-stat exact"><span class="time-stat-label">Genau:</span><span class="time-stat-value">±0m</span></div>`;
+                // Only show if differenceMinutes is a valid number
+                if (typeof differenceMinutes === 'number' && !isNaN(differenceMinutes)) {
+                    if (differenceMinutes > 0) {
+                        // Faster than planned - green
+                        html += `<div class="time-stat session-stat faster"><span class="time-stat-label">Gespart:</span><span class="time-stat-value">+${differenceMinutes}m</span></div>`;
+                    } else if (differenceMinutes < 0) {
+                        // Slower than planned - red
+                        html += `<div class="time-stat session-stat slower"><span class="time-stat-label">Mehr:</span><span class="time-stat-value">${differenceMinutes}m</span></div>`;
+                    } else {
+                        // Exact - blue
+                        html += `<div class="time-stat session-stat exact"><span class="time-stat-label">Genau:</span><span class="time-stat-value">±0m</span></div>`;
+                    }
                 }
             } catch (e) {
                 console.error('Error loading session data:', e);
