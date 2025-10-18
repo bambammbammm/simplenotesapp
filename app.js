@@ -935,7 +935,20 @@ class NotesApp {
         const activeTimeFilters = timeFilters.filter(f => this.activeFilters.has(f));
 
         if (activeTimeFilters.length > 0) {
-            const time = note.timeMinutes || 0;
+            // For stacks, use total time of all tasks in stack
+            let time = note.timeMinutes || 0;
+
+            if (note.stackId) {
+                const stack = this.stacks.find(s => s.id === note.stackId);
+                if (stack) {
+                    // Calculate total time for the stack
+                    time = stack.noteIds.reduce((total, noteId) => {
+                        const stackNote = this.notes.find(n => n.id === noteId);
+                        return total + (stackNote?.timeMinutes || 0);
+                    }, 0);
+                }
+            }
+
             const matchesTime = activeTimeFilters.some(filter => {
                 if (filter === 'time-0-15') return time > 0 && time <= 15;
                 if (filter === 'time-16-30') return time >= 16 && time <= 30;
@@ -1930,7 +1943,20 @@ class NotesApp {
             const activeTimeFilters = timeFilters.filter(f => this.activeFilters.has(f));
 
             if (activeTimeFilters.length > 0) {
-                const time = note.timeMinutes || 0;
+                // For stacks, use total time of all tasks in stack
+                let time = note.timeMinutes || 0;
+
+                if (note.stackId) {
+                    const stack = this.stacks.find(s => s.id === note.stackId);
+                    if (stack) {
+                        // Calculate total time for the stack
+                        time = stack.noteIds.reduce((total, noteId) => {
+                            const stackNote = this.notes.find(n => n.id === noteId);
+                            return total + (stackNote?.timeMinutes || 0);
+                        }, 0);
+                    }
+                }
+
                 const matchesTime = activeTimeFilters.some(filter => {
                     if (filter === 'time-0-15') return time > 0 && time <= 15;
                     if (filter === 'time-16-30') return time >= 16 && time <= 30;
