@@ -189,6 +189,10 @@
                 task.assignedDay = daySelect.value || null;
             }
             editingTaskId = null;
+
+            // Reset button text after edit
+            addTaskBtn.textContent = '+ Weitere Task hinzufügen';
+            addTaskBtn.style.background = '';
         } else {
             // CREATE new task
             const task = {
@@ -263,6 +267,10 @@
         priorityButtons.forEach(btn => {
             btn.classList.toggle('active', btn.dataset.value === currentPriority);
         });
+
+        // Update button text to show we're editing
+        addTaskBtn.textContent = '✓ Änderungen übernehmen';
+        addTaskBtn.style.background = '#27ae60';
 
         // Focus content input
         contentInput.focus();
