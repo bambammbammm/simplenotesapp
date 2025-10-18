@@ -22,7 +22,31 @@ Minimalistische Todo-App mit Terminal-Design. Pure Vanilla JavaScript.
 
 ## Wichtigste Features
 
-### 1. Plan View
+### 1. UI & Navigation
+- **Single-Line Header**: Kompakte Navigation mit View-Name, Filter, Timer, Stats
+- **Filter Command Palette**: Tastatur-driven (Taste `/`)
+  - VS Code-inspiriertes Design
+  - Kategorien, Klassen, Zeit, Priorität, Tage filtern
+  - Aktive Filter als Chips angezeigt (removable mit ×)
+  - Suggestions mit Realtime-Suche
+- **Input Modal**: Neue Notes erstellen (Taste `n`)
+  - Zentriertes Modal statt always-visible Input
+  - 3-zeilige Textarea mit Terminal-Prompt `>`
+  - Completed Counter im Header
+- **Stack View**: Alle Stacks expandiert zeigen (Taste `s`)
+  - Header zeigt "BOARD (STACK VIEW)" in Cyan
+  - Beide Stack-Typen (Group + Sequential) werden aufgeklappt
+  - Type-Icons: + für Group, → für Sequential
+  - Zurück zu Normal: erneut `s` drücken
+
+#### Keyboard Shortcuts (Global)
+- **/** (Slash): Filter Command Palette öffnen
+- **n**: Input Modal öffnen (neue Note erstellen)
+- **s**: Stack View toggle (nur in Board View)
+- **Cmd+Z** (Ctrl+Z): Undo (letzte Aktion rückgängig machen)
+- **ESC**: Modals schließen (Input, Filter, Stack Modal)
+
+### 2. Plan View
 - Typewriter-Editor mit Live Markdown
 - Auto-Task: `(Task 30m --k !!)` → Karte + grünes `[...] ✓`
 - **Stack-Blöcke**: Mehrere Tasks als Stack erstellen
@@ -54,21 +78,28 @@ seq: Stack Titel
 - **Debouncing**: Parsing läuft erst 300ms nach letzter Eingabe (Performance)
 - **Cmd+Enter**: Bypassed Debouncing, triggert sofort
 
-### 2. Kategorien
+### 3. Kategorien
 - `--k` (türkis), `--h` (gelb), `--p` (rot), `--u` (lila)
 - Unterricht: `--u2a`, `--u2b`, etc. → Badge + Filter
 - **Wichtig**: `--u` Parsing VOR anderen!
 
-### 3. Zeit & Sessions
+### 4. Zeit & Sessions
 - Format: `30m`, `125m`
-- Session Stats: Nach Work-Timer → "Gespart: +15m" (grün) oder "Mehr: -10m" (rot)
-- localStorage: `lastSessionData`
+- **Work Timer im Header**: Start/Pause/Stop mit "bis HH:MM" Anzeige
+- **Session Summary Modal**: Zeigt Stats nach Timer-Ende oder letztem Task completed
+  - Geplante vs. tatsächliche Zeit
+  - "Gespart: +15m" (grün) oder "Mehr: -10m" (rot)
+  - Erscheint automatisch bei zwei Szenarien:
+    1. Timer läuft ab
+    2. Letzter offener Task wird erledigt (○)
+- **Background Timer**: Läuft mit `Date.now()`, funktioniert auch wenn Tab inaktiv
+- localStorage: `lastSessionData` (24h Ablauf)
 
-### 4. Prioritäten
+### 5. Prioritäten
 - Syntax: `!`, `!!`, `!!!`
 - **Wichtig**: Als String speichern, nicht Number!
 
-### 5. Stacking
+### 6. Stacking
 - Drag auf Karte → Stack
 - Typen: Group (+) = alle aktiv, Sequential (→) = nur Top aktiv
 - Stack Modal: Klick → ↑↓ Reorder, ⇢ Unstack
@@ -81,17 +112,18 @@ seq: Stack Titel
   - Sequential-Stacks bleiben gestackt auch bei Filtern
   - **Nur Board View**: In Kanban bleiben Gruppen normal (farbige Borders)
 
-### 6. Kanban
+### 7. Kanban
 - 8 Spalten: Unassigned + Mo-So
 - Drag zwischen Tagen
 - Filter: Zeit/Kategorie, keine Tag-Filter
 
-### 7. Completed Counter
+### 8. Completed Counter
 - Zählt erledigte Tasks heute
 - Auto-Reset bei Mitternacht
 - **Nur** bei Complete (○), nicht bei Delete!
+- Angezeigt in Input Modal Header
 
-### 8. Undo System
+### 9. Undo System
 - **Cmd+Z** (Ctrl+Z) macht letzte Aktion rückgängig
 - **Unterstützt**: Note/Stack Creation, Note Deletion, Note Completion
 - **History**: Bis zu 10 Aktionen im `undoStack`
@@ -99,7 +131,7 @@ seq: Stack Titel
 - **Scope**: Funktioniert global, außer in Input/Textarea (außer Plan Editor)
 - **Wichtig**: Undo entfernt Notes permanent (nicht nur complete)
 
-### 9. Visuelle Animationen
+### 10. Visuelle Animationen
 - **Stack/Task Creation**: Fade-in Animation (0.5s) für grüne Bestätigung in Plan View
 - **Neue Karten**: Opacity-basierter Pulse-Effekt (2 Pulses, 1.4s) für neu erstellte Notes
 - **Tracking**: `newlyCreatedNoteIds` Set speichert IDs bis View-Switch
@@ -129,6 +161,10 @@ stacks = stacks.filter(s => s.noteIds.length > 0);
 ```
 
 ### Filter-Logik
+- **Command Palette Integration**: Filter via Keyboard (`/`) oder Button-Click
+- **Filter-ID Format**: `type-value` (z.B. `time-0-15`, `category-k`)
+  - **Wichtig**: Nur ersten Dash splitten (preserve `0-15` in `time-0-15`)
+- **Mapping zu alten Buttons**: Palette aktiviert Legacy-Filter-Buttons im Hintergrund
 - Kategorie: OR
 - Zeit: OR
 - Tags: OR
@@ -141,6 +177,10 @@ stacks = stacks.filter(s => s.noteIds.length > 0);
 - **LocalStorage**: Keine Backend-Infrastruktur
 - **ContentEditable**: Native Rich Text besser als Markdown-Parsing
 - **HTML Storage**: innerHTML statt textContent (bewahrt Formatierung)
+- **Command Palette statt Button-Grid**: Keyboard-first UX, weniger visueller Clutter
+- **Modal-basierter Input**: Fokussiertes Erstellen ohne permanentes UI-Element
+- **Backward Compatibility**: Neue Filter-Palette nutzt alte Filter-Button-Logik (click events)
+- **Header-Timer**: Wichtigste Info immer sichtbar, kein Sidebar-Scrolling nötig
 
 ## Wichtige Bugs/Fixes
 
@@ -152,6 +192,10 @@ stacks = stacks.filter(s => s.noteIds.length > 0);
 6. **Stack-Block Parsing**: Trigger (`/`) nötig, sonst wird bei jedem Input neu erstellt
 7. **Stack Zeit-Addition**: Summe aller Tasks (auch bei Sequential), nicht nur Top-Card
 8. **getPlainText()**: `<br>` und `<div>` zu `\n` konvertieren für Regex-Matching
+9. **Zeit-Filter Split Bug**: `split('-')` auf `time-0-15` zerbrach Value → nur ersten Dash splitten
+10. **Timer Display**: `display: 'block'` verhinderte Flex-Layout → `display: 'flex'` nötig
+11. **Session Summary Modal**: `display: 'block'` statt `'flex'` → Modal nicht korrekt zentriert
+12. **startTime TypeError**: `startTime.getTime()` failed → startTime ist bereits Number, nicht Date
 
 ## LocalStorage Keys
 
@@ -166,6 +210,16 @@ stacks = stacks.filter(s => s.noteIds.length > 0);
 
 **Normal**: × | Zeit | ... | ○ | ⋮
 **Modal**: × | Zeit | ↑ | ↓ | ... | ⇢ | ○ | ⋮
+
+## Datei-Struktur
+
+- **index.html**: Main HTML mit Header, Modals, Views
+- **app.js**: Core App-Logik (Notes, Stacks, Timer, Filters)
+- **ui-redesign.js**: UI-Layer (Filter Palette, Input Modal, Header Updates)
+- **style.css**: Alle Styles (Header, Modals, Cards, Animations)
+- **sw.js**: Service Worker für PWA (Cache-Versioning)
+- **manifest.json**: PWA Manifest
+- **CLAUDE.md**: Dev Docs (dieses File)
 
 ## Entwickelt mit Claude Code
 
@@ -193,3 +247,13 @@ stacks = stacks.filter(s => s.noteIds.length > 0);
 - **Vertikaler Text**: `writing-mode: vertical-rl` + `transform: rotate(180deg)` für lesbare vertikale Labels
 - **Dashed Borders**: Besser als solid/colored für subtile visuelle Trennung
 - **Dedicated Rows**: Keine gemischten Karten = klare Gruppierung, einfacher zu scannen
+- **UI Redesign (v12-v37)**:
+  - Command Palette >> Button Grid (weniger visueller Clutter)
+  - Modal Input >> Always-visible (Fokus + cleaner UI)
+  - Header Timer >> Sidebar (wichtigste Info immer sichtbar)
+  - Single-Line Header >> 3-Row Header (kompakter, professioneller)
+  - Keyboard-first Design (`/`, `n`, `s`) = schnellere Workflows
+  - Filter-ID String-Splitting: Nur ersten Dash beachten (preserve komplexe Values)
+  - Display-Properties beachten: `flex` vs `block` für Layout-Struktur
+  - startTime als Number (timestamp), nicht Date-Object speichern
+  - Session Summary Modal: 2 Trigger-Szenarien (Timer + Last Task)
