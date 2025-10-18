@@ -62,8 +62,8 @@ class NotesApp {
         this.workTimeTotal = document.getElementById('workTimeTotal');
         this.workTimer = document.getElementById('workTimer');
         this.timerDisplay = document.getElementById('timerDisplay');
-        this.endTimeDisplay = document.getElementById('endTimeDisplay');
-        this.endTimeValue = document.getElementById('endTimeValue');
+        this.endTimeDisplay = document.getElementById('endTimeDisplay'); // Optional (not in header)
+        this.endTimeValue = document.getElementById('endTimeValue'); // Optional
         this.startWorkBtn = document.getElementById('startWorkBtn');
         this.pauseBtn = document.getElementById('pauseBtn');
         this.stopBtn = document.getElementById('stopBtn');
@@ -607,12 +607,14 @@ class NotesApp {
 
         // Update UI
         this.startWorkBtn.style.display = 'none';
-        this.workTimer.style.display = 'block';
+        this.workTimer.style.display = 'flex';
         this.pauseBtn.textContent = '‖ Pause';
 
-        // Show and update end time display
-        this.endTimeDisplay.style.display = 'flex';
-        this.updateEndTimeDisplay();
+        // Show and update end time display (if exists)
+        if (this.endTimeDisplay) {
+            this.endTimeDisplay.style.display = 'flex';
+            this.updateEndTimeDisplay();
+        }
 
         // Start countdown - uses real time calculation
         this.timerState.intervalId = setInterval(() => {
@@ -632,8 +634,10 @@ class NotesApp {
                     this.updateTimerDisplay();
                 }
             } else {
-                // Update end time display during pause
-                this.updateEndTimeDisplay();
+                // Update end time display during pause (if exists)
+                if (this.endTimeDisplay) {
+                    this.updateEndTimeDisplay();
+                }
             }
         }, 1000);
 
@@ -659,8 +663,10 @@ class NotesApp {
             this.pauseBtn.textContent = '‖ Pause';
         }
 
-        // Update end time display to reflect pause
-        this.updateEndTimeDisplay();
+        // Update end time display to reflect pause (if exists)
+        if (this.endTimeDisplay) {
+            this.updateEndTimeDisplay();
+        }
     }
 
     stopWork() {
@@ -682,7 +688,9 @@ class NotesApp {
         // Update UI
         this.startWorkBtn.style.display = 'block';
         this.workTimer.style.display = 'none';
-        this.endTimeDisplay.style.display = 'none';
+        if (this.endTimeDisplay) {
+            this.endTimeDisplay.style.display = 'none';
+        }
         this.timerDisplay.textContent = '00:00:00';
     }
 
@@ -744,7 +752,9 @@ class NotesApp {
 
         // Update displays
         this.updateTimerDisplay();
-        this.updateEndTimeDisplay();
+        if (this.endTimeDisplay) {
+            this.updateEndTimeDisplay();
+        }
     }
 
     showSessionSummary(timerRanOut) {
@@ -777,7 +787,9 @@ class NotesApp {
 
         // Hide timer, show start button, but keep sidebar visible
         this.workTimer.style.display = 'none';
-        this.endTimeDisplay.style.display = 'none';
+        if (this.endTimeDisplay) {
+            this.endTimeDisplay.style.display = 'none';
+        }
         this.startWorkBtn.style.display = 'block';
         this.workSidebar.style.display = 'flex'; // Ensure sidebar stays visible
 
