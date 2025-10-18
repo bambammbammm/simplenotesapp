@@ -7,8 +7,8 @@
     <meta name="theme-color" content="#0f0f0f">
     <title>Simple Notes App</title>
     <link rel="icon" type="image/png" href="icon-192.png">
-    <link rel="manifest" href="manifest.json?v=25">
-    <link rel="stylesheet" href="style.css?v=25">
+    <link rel="manifest" href="manifest.json?v=26">
+    <link rel="stylesheet" href="style.css?v=26">
 </head>
 <body>
     <div class="app-container">
@@ -279,13 +279,13 @@ Tipp: Schreiben Sie (Task-Name 30m --k) um automatisch eine Aufgabe zu erstellen
         <div class="input-container">
             <div class="input-wrapper">
                 <span class="input-prompt">&gt;</span>
-                <input
-                    type="text"
+                <textarea
                     id="noteInput"
                     class="note-input"
                     placeholder="Neue Notiz oder Todo eingeben..."
+                    rows="3"
                     autofocus
-                />
+                ></textarea>
             </div>
             <div class="input-bottom">
                 <div class="input-hint">
@@ -388,8 +388,8 @@ Tipp: Schreiben Sie (Task-Name 30m --k) um automatisch eine Aufgabe zu erstellen
         </div>
     </div>
 
-    <script src="app.js?v=25"></script>
-    <script src="ui-redesign.js?v=25"></script>
+    <script src="app.js?v=26"></script>
+    <script src="ui-redesign.js?v=26"></script>
     <script>
         // Register Service Worker for PWA
         if ('serviceWorker' in navigator) {
