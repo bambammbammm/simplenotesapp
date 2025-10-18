@@ -90,7 +90,7 @@ body {
     border-right: 1px solid #333;
 }
 
-/* Task Creator Modal (Option+N) */
+/* Task Creator Modal (Cmd+K) */
 .task-creator-modal {
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
@@ -2078,6 +2078,40 @@ body {
 
 .plan-task-widget .widget-edit-btn:active {
     transform: scale(0.95);
+}
+
+/* Plan Task Icons (New Universal Creator) */
+.plan-task-icon {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    line-height: 18px;
+    text-align: center;
+    background: #fff;
+    color: #000;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 14px;
+    margin: 0 2px;
+    transition: all 0.2s ease;
+    vertical-align: middle;
+    user-select: none;
+}
+
+.plan-task-icon:hover {
+    background: #3498db;
+    color: #fff;
+    transform: scale(1.1);
+    box-shadow: 0 2px 6px rgba(52, 152, 219, 0.4);
+}
+
+.plan-stack-icon {
+    background: #9b59b6;
+    color: #fff;
+}
+
+.plan-stack-icon:hover {
+    background: #8e44ad;
 }
 
 .welcome-message {
