@@ -1,15 +1,15 @@
 // Simple Service Worker for PWA installation
-const CACHE_NAME = 'simple-notes-v52';
+const CACHE_NAME = 'simple-notes-v53';
 const urlsToCache = [
   '/',
   '/index.html',
-  '/style.css?v=52',
-  '/app.js?v=52',
-  '/ui-redesign.js?v=52',
-  '/task-creator.js?v=52',
+  '/style.css?v=53',
+  '/app.js?v=53',
+  '/ui-redesign.js?v=53',
+  '/task-creator.js?v=53',
   '/icon-192.png',
   '/icon-512.png',
-  '/manifest.json?v=52'
+  '/manifest.json?v=53'
 ];
 
 // Install event - cache files

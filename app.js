@@ -156,9 +156,16 @@ class NotesApp {
         this.viewSwitchBtn.addEventListener('click', () => this.switchView());
 
         // Plan editor event listeners
-        this.planEditor.addEventListener('input', () => this.handlePlanInputDebounced());
+        this.planEditor.addEventListener('input', () => {
+            this.handlePlanInputDebounced();
+            this.typewriterScroll();
+        });
         this.planEditor.addEventListener('blur', () => this.savePlanText());
-        this.planEditor.addEventListener('keydown', (e) => this.handlePlanKeyDown(e));
+        this.planEditor.addEventListener('keydown', (e) => {
+            this.handlePlanKeyDown(e);
+            // Delay scroll slightly to wait for cursor position update
+            setTimeout(() => this.typewriterScroll(), 0);
+        });
 
         // Checkbox click handler
         this.planEditor.addEventListener('click', (e) => {
@@ -4292,6 +4299,49 @@ class NotesApp {
 
             this.commandPaletteBody.appendChild(item);
         });
+    }
+
+    typewriterScroll() {
+        // Typewriter mode: keep current line centered vertically
+        const selection = window.getSelection();
+        if (!selection.rangeCount) return;
+
+        const range = selection.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+
+        // If cursor is not visible (rect height is 0), try to get it from a temporary element
+        let cursorTop = rect.top;
+        let cursorHeight = rect.height;
+
+        if (cursorHeight === 0) {
+            // Cursor might be at the end of a line, create a temporary span to measure
+            const tempSpan = document.createElement('span');
+            tempSpan.textContent = '\u200B'; // Zero-width space
+            range.insertNode(tempSpan);
+            const tempRect = tempSpan.getBoundingClientRect();
+            cursorTop = tempRect.top;
+            cursorHeight = tempRect.height;
+            tempSpan.remove();
+        }
+
+        // Get editor container
+        const editorContainer = this.planEditor.parentElement;
+        const containerRect = editorContainer.getBoundingClientRect();
+
+        // Calculate middle of viewport
+        const viewportMiddle = window.innerHeight / 2;
+
+        // Calculate how much to scroll to center the cursor
+        const cursorMiddle = cursorTop + (cursorHeight / 2);
+        const scrollOffset = cursorMiddle - viewportMiddle;
+
+        // Smooth scroll the container
+        if (Math.abs(scrollOffset) > 5) { // Only scroll if offset is significant
+            editorContainer.scrollBy({
+                top: scrollOffset,
+                behavior: 'smooth'
+            });
+        }
     }
 
 }
