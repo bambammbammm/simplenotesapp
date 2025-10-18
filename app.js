@@ -2,6 +2,7 @@ class NotesApp {
     constructor() {
         this.notes = [];
         this.stacks = [];
+        this.stackViewActive = false; // Stack View mode (show all stacks expanded)
         this.noteInput = document.getElementById('noteInput');
         this.notesCanvas = document.getElementById('notesCanvas');
         this.kanbanView = document.getElementById('kanbanView');
@@ -56,8 +57,8 @@ class NotesApp {
         this.undoDropdownClose = document.getElementById('undoDropdownClose');
         this.undoHistoryList = document.getElementById('undoHistoryList');
 
-        // Work Timer
-        this.workSidebar = document.getElementById('workSidebar');
+        // Work Timer (UI Redesign: now using bottom bar)
+        this.workSidebar = document.getElementById('bottomBar'); // Changed from 'workSidebar' to 'bottomBar'
         this.workTimeTotal = document.getElementById('workTimeTotal');
         this.workTimer = document.getElementById('workTimer');
         this.timerDisplay = document.getElementById('timerDisplay');
@@ -66,7 +67,7 @@ class NotesApp {
         this.startWorkBtn = document.getElementById('startWorkBtn');
         this.pauseBtn = document.getElementById('pauseBtn');
         this.stopBtn = document.getElementById('stopBtn');
-        this.sessionSummary = document.getElementById('sessionSummary');
+        this.sessionSummary = document.getElementById('sessionSummaryModal'); // Changed from 'sessionSummary' to 'sessionSummaryModal'
         this.sessionSummaryClose = document.getElementById('sessionSummaryClose');
         this.sessionPlanned = document.getElementById('sessionPlanned');
         this.sessionActual = document.getElementById('sessionActual');
@@ -249,6 +250,25 @@ class NotesApp {
                 // For everything else (clicking on canvas, notes, etc.), trigger task undo
                 e.preventDefault();
                 this.undo();
+            }
+
+            // Stack View Toggle: 's' key (only in Board view)
+            if (e.key === 's' && !cmdOrCtrl) {
+                const target = e.target;
+
+                // Don't trigger if typing in input/textarea or contenteditable
+                const isTypingField = target.tagName === 'INPUT' ||
+                                     target.tagName === 'TEXTAREA' ||
+                                     target.isContentEditable;
+                if (isTypingField) {
+                    return;
+                }
+
+                // Only toggle in Board view
+                if (this.notesCanvas.style.display !== 'none') {
+                    e.preventDefault();
+                    this.toggleStackView();
+                }
             }
         });
 
@@ -1443,6 +1463,20 @@ class NotesApp {
         }
     }
 
+    toggleStackView() {
+        // Toggle Stack View mode (only in Board view)
+        this.stackViewActive = !this.stackViewActive;
+        console.log('Stack View:', this.stackViewActive ? 'ON' : 'OFF');
+
+        // Update header view name indicator
+        if (window.UI_REDESIGN && window.UI_REDESIGN.updateHeaderViewName) {
+            window.UI_REDESIGN.updateHeaderViewName();
+        }
+
+        // Re-render to show/hide stack expansion
+        this.render();
+    }
+
     switchToView(viewName) {
         // Auto-save current note if leaving plan view
         if (this.currentView === 'plan' && this.currentSavedNoteId) {
@@ -1589,8 +1623,13 @@ class NotesApp {
                 .filter(n => n && filteredIds.has(n.id)); // Only include filtered notes
 
             if (stackNotes.length > 0) {
-                // If filters are active AND stack is a group type, render notes in dedicated rows
-                if (this.activeFilters.size > 0 && stack.type === 'group') {
+                // Determine if this stack should be expanded:
+                // 1. Stack View mode: ALL stacks expanded (groups AND sequential)
+                // 2. Filter mode: Only group stacks expanded
+                const shouldExpand = this.stackViewActive ||
+                                    (this.activeFilters.size > 0 && stack.type === 'group');
+
+                if (shouldExpand) {
                     // Create a wrapper container for this group with sidebar
                     const groupWrapper = document.createElement('div');
                     groupWrapper.className = 'group-row-wrapper';
@@ -1604,7 +1643,14 @@ class NotesApp {
                     label.className = 'group-row-label';
                     label.textContent = stack.title || 'Gruppe';
 
+                    // Add stack type icon below the label
+                    const typeIcon = document.createElement('div');
+                    typeIcon.className = 'group-row-type-icon';
+                    typeIcon.textContent = stack.type === 'group' ? '+' : '→';
+                    typeIcon.title = stack.type === 'group' ? 'Gruppe' : 'Sequenz';
+
                     sidebar.appendChild(label);
+                    sidebar.appendChild(typeIcon);
                     groupWrapper.appendChild(sidebar);
 
                     // Create inner grid container for the cards
@@ -1621,21 +1667,57 @@ class NotesApp {
                     groupWrapper.appendChild(groupGrid);
                     this.notesCanvas.appendChild(groupWrapper);
                 } else {
-                    // Render as stack (normal behavior for sequential stacks or when no filters)
+                    // Render as stack (when not in Stack View and not a filtered group)
                     const stackContainer = this.createStackContainer(stack, stackNotes);
-                    this.notesCanvas.appendChild(stackContainer);
+
+                    // If filters active OR stack view active, wrap in container for consistent alignment
+                    if (this.activeFilters.size > 0 || this.stackViewActive) {
+                        const wrapper = document.createElement('div');
+                        wrapper.style.paddingLeft = '80px'; // Same as group-row-wrapper
+                        wrapper.appendChild(stackContainer);
+                        this.notesCanvas.appendChild(wrapper);
+                    } else {
+                        this.notesCanvas.appendChild(stackContainer);
+                    }
+
                     stackNotes.forEach(note => renderedNotes.add(note.id));
                 }
             }
         });
 
         // Render individual notes (not in stacks, and filtered)
-        filteredNotes.forEach(note => {
-            if (!renderedNotes.has(note.id)) {
-                const noteCard = this.createNoteCard(note);
-                this.notesCanvas.appendChild(noteCard);
+        const individualNotes = filteredNotes.filter(note => !renderedNotes.has(note.id));
+
+        if (individualNotes.length > 0) {
+            // If filters OR stack view active, wrap ungrouped notes in invisible group-row for consistent alignment
+            if (this.activeFilters.size > 0 || this.stackViewActive) {
+                const groupWrapper = document.createElement('div');
+                groupWrapper.className = 'group-row-wrapper';
+
+                // Create invisible sidebar (no label, just spacing)
+                const sidebar = document.createElement('div');
+                sidebar.className = 'group-row-sidebar group-row-sidebar-empty';
+                groupWrapper.appendChild(sidebar);
+
+                // Create inner grid container
+                const groupGrid = document.createElement('div');
+                groupGrid.className = 'group-row-grid';
+
+                individualNotes.forEach(note => {
+                    const noteCard = this.createNoteCard(note);
+                    groupGrid.appendChild(noteCard);
+                });
+
+                groupWrapper.appendChild(groupGrid);
+                this.notesCanvas.appendChild(groupWrapper);
+            } else {
+                // No filters: render normally
+                individualNotes.forEach(note => {
+                    const noteCard = this.createNoteCard(note);
+                    this.notesCanvas.appendChild(noteCard);
+                });
             }
-        });
+        }
 
     }
 
@@ -3981,5 +4063,5 @@ class NotesApp {
 
 // Initialize app when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    new NotesApp();
+    window.app = new NotesApp();
 });

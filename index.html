@@ -7,86 +7,47 @@
     <meta name="theme-color" content="#0f0f0f">
     <title>Simple Notes App</title>
     <link rel="icon" type="image/png" href="icon-192.png">
-    <link rel="manifest" href="manifest.json?v=11">
-    <link rel="stylesheet" href="style.css?v=11">
+    <link rel="manifest" href="manifest.json?v=23">
+    <link rel="stylesheet" href="style.css?v=23">
 </head>
 <body>
     <div class="app-container">
-        <!-- Work Timer Sidebar -->
-        <aside class="work-sidebar" id="workSidebar" style="display: none;">
-            <div class="work-sidebar-content">
-                <h3 class="work-sidebar-title">Fokussierte Aufgaben</h3>
-
-                <div class="work-time-display">
-                    <div class="work-time-label">Gesamtzeit:</div>
-                    <div class="work-time-total" id="workTimeTotal">0m</div>
-                </div>
-
-                <div class="work-timer" id="workTimer" style="display: none;">
-                    <div class="timer-display" id="timerDisplay">00:00:00</div>
-                    <div class="end-time-display" id="endTimeDisplay" style="display: none;">
-                        <span class="end-time-label">Fertig um:</span>
-                        <span class="end-time-value" id="endTimeValue">--:--</span>
-                    </div>
-                    <div class="timer-controls">
-                        <button class="timer-btn pause-btn" id="pauseBtn">‖ Pause</button>
-                        <button class="timer-btn stop-btn" id="stopBtn">□ Stop</button>
-                    </div>
-                </div>
-
-                <button class="start-work-btn" id="startWorkBtn">▸ Start Work</button>
-
-                <div class="session-summary" id="sessionSummary" style="display: none;">
-                    <div class="session-summary-title">Session beendet!</div>
-                    <div class="session-summary-content">
-                        <div class="session-stat">
-                            <span class="session-stat-label">Geplant:</span>
-                            <span class="session-stat-value" id="sessionPlanned">0m</span>
-                        </div>
-                        <div class="session-stat">
-                            <span class="session-stat-label">Tatsächlich:</span>
-                            <span class="session-stat-value" id="sessionActual">0m</span>
-                        </div>
-                        <div class="session-difference" id="sessionDifference">
-                            <!-- Will show "+5m schneller" or "-5m länger" -->
-                        </div>
-                    </div>
-                    <button class="session-summary-close" id="sessionSummaryClose">OK</button>
-                </div>
-            </div>
-        </aside>
-
         <div class="main-content">
-        <!-- Header -->
+        <!-- Header: New Single-Line Design -->
         <header class="app-header">
-            <div class="header-top">
-                <div class="header-left">
-                    <div class="header-left-container">
-                        <button class="hamburger-menu-btn" id="hamburgerMenuBtn" title="Menü">
-                            <span class="hamburger-icon">☰</span>
+            <div class="header-main">
+                <button class="hamburger-menu-btn" id="hamburgerMenuBtn" title="Menü">
+                    <span class="hamburger-icon">☰</span>
+                </button>
+                <!-- Hamburger Dropdown Menu -->
+                <div class="hamburger-dropdown" id="hamburgerDropdown" style="display: none;">
+                    <div class="dropdown-section">
+                        <h4 class="dropdown-title">Backup</h4>
+                        <button class="dropdown-btn" id="selectBackupFolder" title="Backup-Ordner auswählen">
+                            ⊞ Ordner wählen
                         </button>
-                        <div class="time-stats" id="timeStats"></div>
-                    </div>
-                    <!-- Hamburger Dropdown Menu -->
-                    <div class="hamburger-dropdown" id="hamburgerDropdown" style="display: none;">
-                        <div class="dropdown-section">
-                            <h4 class="dropdown-title">Backup</h4>
-                            <button class="dropdown-btn" id="selectBackupFolder" title="Backup-Ordner auswählen">
-                                ⊞ Ordner wählen
-                            </button>
-                            <button class="dropdown-btn" id="manualBackup" title="Backup jetzt erstellen" disabled>
-                                ⊡ Backup
-                            </button>
-                            <button class="dropdown-btn" id="importBackup" title="Backup wiederherstellen">
-                                ⊟ Import
-                            </button>
-                            <div class="backup-status" id="backupStatus">Kein Ordner gewählt</div>
-                        </div>
+                        <button class="dropdown-btn" id="manualBackup" title="Backup jetzt erstellen" disabled>
+                            ⊡ Backup
+                        </button>
+                        <button class="dropdown-btn" id="importBackup" title="Backup wiederherstellen">
+                            ⊟ Import
+                        </button>
+                        <div class="backup-status" id="backupStatus">Kein Ordner gewählt</div>
                     </div>
                 </div>
-                <div class="header-center">
-                </div>
-                <div class="header-right">
+
+                <div class="header-view-name" id="headerViewName">BOARD</div>
+                <span class="note-count">0 notes</span>
+
+                <div class="header-stats" id="timeStats"></div>
+
+                <div class="header-actions">
+                    <div class="header-session-stat" id="headerSessionStat" style="display: none;"></div>
+
+                    <button class="filter-palette-trigger" id="filterPaletteTrigger" title="Filter öffnen (/)">
+                        <span id="filterActiveCount">Filter</span>
+                    </button>
+
                     <div class="undo-container">
                         <button class="undo-btn" id="undoBtn" title="Rückgängig (Cmd+Z)" disabled>
                             <span class="undo-icon">↶</span>
@@ -103,57 +64,67 @@
                             </div>
                         </div>
                     </div>
-                    <button class="view-switch-btn" id="viewSwitchBtn" title="Ansicht wechseln (Board ↔ Kanban)">
+
+                    <button class="view-switch-btn" id="viewSwitchBtn" title="Ansicht wechseln">
                         <span class="view-icon">⊞</span>
                         <span class="view-label">Kanban</span>
                     </button>
-                    <span class="note-count">0 notes</span>
                 </div>
             </div>
-            <div class="header-filters">
-                <div class="filter-section">
-                    <span class="filter-label">Kategorie:</span>
-                    <button class="filter-btn" data-filter="category-k" id="filterK">KSWIL</button>
-                    <button class="filter-btn" data-filter="category-h" id="filterH">HSLU</button>
-                    <button class="filter-btn" data-filter="category-p" id="filterP">Privat</button>
-                    <button class="filter-btn" data-filter="category-u" id="filterU">Unterricht</button>
-                </div>
-                <div class="filter-section">
-                    <span class="filter-label">Klasse:</span>
-                    <button class="filter-btn" data-filter="class-2a" id="filterClass2a">2a</button>
-                    <button class="filter-btn" data-filter="class-2b" id="filterClass2b">2b</button>
-                    <button class="filter-btn" data-filter="class-2c" id="filterClass2c">2c</button>
-                    <button class="filter-btn" data-filter="class-3a" id="filterClass3a">3a</button>
-                    <button class="filter-btn" data-filter="class-3b" id="filterClass3b">3b</button>
-                    <button class="filter-btn" data-filter="class-5" id="filterClass5">5</button>
-                </div>
-                <div class="filter-section">
-                    <span class="filter-label">Zeit:</span>
-                    <button class="filter-btn" data-filter="time-0-15" id="filterTime15">≤15m</button>
-                    <button class="filter-btn" data-filter="time-16-30" id="filterTime30">16-30m</button>
-                    <button class="filter-btn" data-filter="time-31-60" id="filterTime60">31-60m</button>
-                    <button class="filter-btn" data-filter="time-60+" id="filterTime60Plus">60m+</button>
-                </div>
-                <div class="filter-section">
-                    <span class="filter-label">Priorität:</span>
-                    <button class="filter-btn" data-filter="priority-1" id="filterPriority1">!</button>
-                    <button class="filter-btn" data-filter="priority-2" id="filterPriority2">!!</button>
-                    <button class="filter-btn" data-filter="priority-3" id="filterPriority3">!!!</button>
-                </div>
-                <div class="filter-section">
-                    <span class="filter-label">Tag:</span>
-                    <button class="filter-btn" data-filter="day-unassigned" id="filterDayUnassigned">Keine</button>
-                    <button class="filter-btn" data-filter="day-monday" id="filterDayMon">Mo</button>
-                    <button class="filter-btn" data-filter="day-tuesday" id="filterDayTue">Di</button>
-                    <button class="filter-btn" data-filter="day-wednesday" id="filterDayWed">Mi</button>
-                    <button class="filter-btn" data-filter="day-thursday" id="filterDayThu">Do</button>
-                    <button class="filter-btn" data-filter="day-friday" id="filterDayFri">Fr</button>
-                    <button class="filter-btn" data-filter="day-saturday" id="filterDaySat">Sa</button>
-                    <button class="filter-btn" data-filter="day-sunday" id="filterDaySun">So</button>
-                </div>
-                <button class="filter-clear-btn" id="clearFilters" style="display: none;">× Filter zurücksetzen</button>
+
+            <!-- Filter Chips (only visible when filters active) -->
+            <div class="filter-chips-bar" id="filterChipsBar" style="display: none;">
+                <span class="filter-chips-label">Aktiv:</span>
+                <div class="filter-chips-container" id="filterChipsContainer"></div>
             </div>
         </header>
+
+        <!-- Filter Command Palette -->
+        <div class="filter-command-palette" id="filterCommandPalette" style="display: none;">
+            <div class="filter-palette-overlay"></div>
+            <div class="filter-palette-box">
+                <input
+                    type="text"
+                    class="filter-palette-input"
+                    id="filterPaletteInput"
+                    placeholder="> filter --k --h --15m !!"
+                    autocomplete="off"
+                />
+                <div class="filter-palette-suggestions" id="filterPaletteSuggestions">
+                    <!-- Suggestions will be inserted dynamically -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Hidden filter buttons (for backwards compatibility with app.js) -->
+        <div style="display: none;">
+            <button class="filter-btn" data-filter="category-k" id="filterK">KSWIL</button>
+            <button class="filter-btn" data-filter="category-h" id="filterH">HSLU</button>
+            <button class="filter-btn" data-filter="category-p" id="filterP">Privat</button>
+            <button class="filter-btn" data-filter="category-u" id="filterU">Unterricht</button>
+            <button class="filter-btn" data-filter="class-2a" id="filterClass2a">2a</button>
+            <button class="filter-btn" data-filter="class-2b" id="filterClass2b">2b</button>
+            <button class="filter-btn" data-filter="class-2c" id="filterClass2c">2c</button>
+            <button class="filter-btn" data-filter="class-3a" id="filterClass3a">3a</button>
+            <button class="filter-btn" data-filter="class-3b" id="filterClass3b">3b</button>
+            <button class="filter-btn" data-filter="class-5" id="filterClass5">5</button>
+            <button class="filter-btn" data-filter="time-0-15" id="filterTime15">≤15m</button>
+            <button class="filter-btn" data-filter="time-16-30" id="filterTime30">16-30m</button>
+            <button class="filter-btn" data-filter="time-31-60" id="filterTime60">31-60m</button>
+            <button class="filter-btn" data-filter="time-60+" id="filterTime60Plus">60m+</button>
+            <button class="filter-btn" data-filter="priority-1" id="filterPriority1">!</button>
+            <button class="filter-btn" data-filter="priority-2" id="filterPriority2">!!</button>
+            <button class="filter-btn" data-filter="priority-3" id="filterPriority3">!!!</button>
+            <button class="filter-btn" data-filter="day-unassigned" id="filterDayUnassigned">Keine</button>
+            <button class="filter-btn" data-filter="day-monday" id="filterDayMon">Mo</button>
+            <button class="filter-btn" data-filter="day-tuesday" id="filterDayTue">Di</button>
+            <button class="filter-btn" data-filter="day-wednesday" id="filterDayWed">Mi</button>
+            <button class="filter-btn" data-filter="day-thursday" id="filterDayThu">Do</button>
+            <button class="filter-btn" data-filter="day-friday" id="filterDayFri">Fr</button>
+            <button class="filter-btn" data-filter="day-saturday" id="filterDaySat">Sa</button>
+            <button class="filter-btn" data-filter="day-sunday" id="filterDaySun">So</button>
+            <button class="filter-clear-btn" id="clearFilters">× Filter zurücksetzen</button>
+        </div>
 
         <!-- Notes Canvas (Board View) -->
         <main class="notes-canvas" id="notesCanvas">
@@ -326,6 +297,55 @@ Tipp: Schreiben Sie (Task-Name 30m --k) um automatisch eine Aufgabe zu erstellen
         </div>
     </div>
 
+    <!-- Bottom Bar: Focus Section -->
+    <div class="bottom-bar" id="bottomBar" style="display: none;">
+        <div class="bottom-bar-title">Fokussierte Aufgaben</div>
+        <div class="bottom-bar-stats">
+            <div class="focus-time-display">
+                <span class="focus-time" id="workTimeTotal">0m</span>
+                <span class="focus-label">gesamt</span>
+            </div>
+            <div class="focus-count" id="focusCountDisplay" style="display: none;"></div>
+        </div>
+
+        <!-- Timer Display (when running) -->
+        <div class="bottom-timer" id="workTimer" style="display: none;">
+            <div class="timer-display" id="timerDisplay">00:00:00</div>
+            <div class="end-time-display" id="endTimeDisplay" style="display: none;">
+                <span class="end-time-label">Endet um</span>
+                <span class="end-time-value" id="endTimeValue">--:--</span>
+            </div>
+            <div class="timer-controls">
+                <button class="timer-btn pause-btn" id="pauseBtn">‖ Pause</button>
+                <button class="timer-btn stop-btn" id="stopBtn">□ Stop</button>
+            </div>
+        </div>
+
+        <button class="start-work-btn" id="startWorkBtn">▶ Start Work</button>
+
+        <!-- Session Summary Modal (overlay) -->
+        <div class="session-summary-modal" id="sessionSummaryModal" style="display: none;">
+            <div class="session-summary-overlay"></div>
+            <div class="session-summary-box">
+                <div class="session-summary-title">Session beendet!</div>
+                <div class="session-summary-content">
+                    <div class="session-stat">
+                        <span class="session-stat-label">Geplant:</span>
+                        <span class="session-stat-value" id="sessionPlanned">0m</span>
+                    </div>
+                    <div class="session-stat">
+                        <span class="session-stat-label">Tatsächlich:</span>
+                        <span class="session-stat-value" id="sessionActual">0m</span>
+                    </div>
+                    <div class="session-difference" id="sessionDifference">
+                        <!-- Will show "+5m schneller" or "-5m länger" -->
+                    </div>
+                </div>
+                <button class="session-summary-close" id="sessionSummaryClose">OK</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Command Palette -->
     <div class="command-palette" id="commandPalette" style="display: none;">
         <div class="command-palette-overlay"></div>
@@ -368,7 +388,8 @@ Tipp: Schreiben Sie (Task-Name 30m --k) um automatisch eine Aufgabe zu erstellen
         </div>
     </div>
 
-    <script src="app.js?v=11"></script>
+    <script src="app.js?v=23"></script>
+    <script src="ui-redesign.js?v=23"></script>
     <script>
         // Register Service Worker for PWA
         if ('serviceWorker' in navigator) {

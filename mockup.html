@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Header Redesign Mockup</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-box: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #1a1a1a;
+            color: #e0e0e0;
+            padding: 0;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        /* ============================================
+           NEW HEADER DESIGN - Single Line
+           ============================================ */
+        .header {
+            background: #2a2a2a;
+            border-bottom: 1px solid #444;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-view {
+            font-size: 16px;
+            font-weight: bold;
+            color: #00ff00;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .header-meta {
+            color: #888;
+            font-size: 13px;
+        }
+
+        .header-stats {
+            display: flex;
+            gap: 16px;
+            font-size: 13px;
+        }
+
+        .stat-item {
+            color: #aaa;
+        }
+
+        .stat-item span {
+            color: #fff;
+            font-weight: bold;
+        }
+
+        .stat-saved {
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 2px 8px;
+            border-radius: 3px;
+        }
+
+        .header-right {
+            margin-left: auto;
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .filter-trigger {
+            background: transparent;
+            border: 1px solid #555;
+            color: #aaa;
+            padding: 4px 12px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .filter-trigger:hover {
+            border-color: #00ff00;
+            color: #00ff00;
+        }
+
+        /* ============================================
+           FILTER CHIPS (Active Filters)
+           ============================================ */
+        .filter-chips {
+            background: #222;
+            border-bottom: 1px solid #333;
+            padding: 8px 16px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-chips-label {
+            color: #666;
+            font-size: 11px;
+            text-transform: uppercase;
+            margin-right: 8px;
+        }
+
+        .chip {
+            background: #2a2a2a;
+            border: 1px solid #444;
+            padding: 3px 10px;
+            font-size: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border-radius: 3px;
+        }
+
+        .chip-kswil { border-color: #00d4ff; color: #00d4ff; }
+        .chip-hslu { border-color: #ffd700; color: #ffd700; }
+        .chip-time { border-color: #888; color: #aaa; }
+        .chip-prio { border-color: #ff4444; color: #ff4444; }
+
+        .chip-remove {
+            background: transparent;
+            border: none;
+            color: inherit;
+            cursor: pointer;
+            opacity: 0.6;
+            padding: 0;
+            margin: 0;
+            font-size: 14px;
+            line-height: 1;
+        }
+
+        .chip-remove:hover {
+            opacity: 1;
+        }
+
+        /* ============================================
+           MAIN CONTENT AREA (Demo Cards)
+           ============================================ */
+        .main-content {
+            padding: 24px 16px 100px 16px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+        }
+
+        .demo-card {
+            background: #2a2a2a;
+            border: 2px dashed #444;
+            padding: 16px;
+            min-height: 120px;
+            position: relative;
+        }
+
+        .demo-card.kswil { border-color: #00d4ff; }
+        .demo-card.hslu { border-color: #ffd700; }
+
+        .card-time {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            color: #888;
+            font-size: 12px;
+        }
+
+        .card-content {
+            margin-top: 8px;
+            color: #e0e0e0;
+            font-size: 14px;
+        }
+
+        /* ============================================
+           BOTTOM BAR (Focus Section)
+           ============================================ */
+        .bottom-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #1a1a1a;
+            border-top: 2px solid #444;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            z-index: 100;
+        }
+
+        .bottom-bar-title {
+            color: #888;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-right: 1px solid #444;
+            padding-right: 24px;
+        }
+
+        .focus-stats {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+        }
+
+        .focus-time {
+            font-size: 32px;
+            font-weight: bold;
+            color: #00ff00;
+        }
+
+        .focus-label {
+            color: #666;
+            font-size: 12px;
+        }
+
+        .focus-count {
+            color: #888;
+            font-size: 13px;
+            margin-left: 8px;
+        }
+
+        .start-work-btn {
+            background: #00ff00;
+            color: #1a1a1a;
+            border: none;
+            padding: 12px 32px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.2s;
+            margin-left: auto;
+        }
+
+        .start-work-btn:hover {
+            background: #00cc00;
+            transform: translateY(-2px);
+        }
+
+        /* ============================================
+           COMMAND PALETTE (Modal)
+           ============================================ */
+        .command-palette {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: flex-start;
+            justify-content: center;
+            padding-top: 100px;
+            z-index: 200;
+        }
+
+        .command-palette.active {
+            display: flex;
+        }
+
+        .command-box {
+            background: #2a2a2a;
+            border: 2px solid #00ff00;
+            width: 600px;
+            max-width: 90%;
+            box-shadow: 0 8px 32px rgba(0, 255, 0, 0.3);
+        }
+
+        .command-input {
+            width: 100%;
+            background: #1a1a1a;
+            border: none;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            padding: 16px;
+            outline: none;
+        }
+
+        .command-suggestions {
+            border-top: 1px solid #444;
+            padding: 8px 0;
+        }
+
+        .suggestion-item {
+            padding: 10px 16px;
+            color: #aaa;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.15s;
+        }
+
+        .suggestion-item:hover {
+            background: #333;
+            color: #00ff00;
+        }
+
+        .suggestion-key {
+            color: #00d4ff;
+        }
+
+        .suggestion-desc {
+            color: #666;
+            font-size: 11px;
+            margin-left: 8px;
+        }
+
+        /* Keyboard hint */
+        .keyboard-hint {
+            position: fixed;
+            bottom: 100px;
+            right: 16px;
+            background: #2a2a2a;
+            border: 1px solid #444;
+            padding: 8px 12px;
+            font-size: 11px;
+            color: #666;
+            border-radius: 3px;
+        }
+
+        .keyboard-hint kbd {
+            background: #1a1a1a;
+            padding: 2px 6px;
+            border: 1px solid #555;
+            border-radius: 2px;
+            color: #aaa;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- NEW HEADER: Single Line -->
+    <header class="header">
+        <div class="header-view">BOARD</div>
+        <div class="header-meta">22 notes</div>
+        <div class="header-stats">
+            <div class="stat-item">KSWIL: <span>170m</span></div>
+            <div class="stat-item">HSLU: <span>44m</span></div>
+            <div class="stat-item">Privat: <span>43m</span></div>
+            <div class="stat-item">Total: <span>267m</span></div>
+        </div>
+        <div class="header-right">
+            <div class="stat-saved">Gespart: +30m</div>
+            <button class="filter-trigger" onclick="toggleCommandPalette()">
+                [3 filters active] /
+            </button>
+        </div>
+    </header>
+
+    <!-- FILTER CHIPS (when filters active) -->
+    <div class="filter-chips">
+        <span class="filter-chips-label">Active:</span>
+        <div class="chip chip-kswil">
+            KSWIL
+            <button class="chip-remove">×</button>
+        </div>
+        <div class="chip chip-hslu">
+            HSLU
+            <button class="chip-remove">×</button>
+        </div>
+        <div class="chip chip-time">
+            &lt;15m
+            <button class="chip-remove">×</button>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT (Demo Cards) -->
+    <div class="main-content">
+        <div class="demo-card kswil">
+            <div class="card-time">7m (44m)</div>
+            <div class="card-content">terst<br>task g</div>
+        </div>
+        <div class="demo-card hslu">
+            <div class="card-time">5m (20m)</div>
+            <div class="card-content">task bibi</div>
+        </div>
+        <div class="demo-card kswil">
+            <div class="card-time">15m</div>
+            <div class="card-content">Hat die 5. Klasse am MATA Kickoff am Nachmittag keinen Unterricht?</div>
+        </div>
+        <div class="demo-card hslu">
+            <div class="card-time">45m</div>
+            <div class="card-content">Nächste Doppellektion für Licht und Farbe planen</div>
+        </div>
+    </div>
+
+    <!-- BOTTOM BAR: Focus Section -->
+    <div class="bottom-bar">
+        <div class="bottom-bar-title">Fokussierte Aufgaben</div>
+        <div class="focus-stats">
+            <div class="focus-time">8m</div>
+            <div class="focus-label">gesamt</div>
+            <div class="focus-count">(2 tasks)</div>
+        </div>
+        <button class="start-work-btn">▶ Start Work</button>
+    </div>
+
+    <!-- COMMAND PALETTE (Modal) -->
+    <div class="command-palette" id="commandPalette" onclick="if(event.target === this) toggleCommandPalette()">
+        <div class="command-box">
+            <input
+                type="text"
+                class="command-input"
+                placeholder="> filter --k --h --15m !!"
+                autofocus
+            />
+            <div class="command-suggestions">
+                <div class="suggestion-item">
+                    <span class="suggestion-key">--k</span>
+                    <span class="suggestion-desc">KSWIL Kategorie</span>
+                </div>
+                <div class="suggestion-item">
+                    <span class="suggestion-key">--h</span>
+                    <span class="suggestion-desc">HSLU Kategorie</span>
+                </div>
+                <div class="suggestion-item">
+                    <span class="suggestion-key">--p</span>
+                    <span class="suggestion-desc">Privat Kategorie</span>
+                </div>
+                <div class="suggestion-item">
+                    <span class="suggestion-key">--15m</span>
+                    <span class="suggestion-desc">Zeit-Filter (≤15m, 16-30m, etc.)</span>
+                </div>
+                <div class="suggestion-item">
+                    <span class="suggestion-key">!!</span>
+                    <span class="suggestion-desc">Priorität-Filter (!, !!, !!!)</span>
+                </div>
+                <div class="suggestion-item">
+                    <span class="suggestion-key">clear</span>
+                    <span class="suggestion-desc">Alle Filter entfernen</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Keyboard Hint -->
+    <div class="keyboard-hint">
+        Press <kbd>/</kbd> or <kbd>Cmd+K</kbd> to open filter palette
+    </div>
+
+    <script>
+        function toggleCommandPalette() {
+            const palette = document.getElementById('commandPalette');
+            palette.classList.toggle('active');
+        }
+
+        // Keyboard shortcut
+        document.addEventListener('keydown', (e) => {
+            if (e.key === '/' || (e.metaKey && e.key === 'k')) {
+                e.preventDefault();
+                toggleCommandPalette();
+            }
+            if (e.key === 'Escape') {
+                document.getElementById('commandPalette').classList.remove('active');
+            }
+        });
+    </script>
+
+</body>
+</html>
