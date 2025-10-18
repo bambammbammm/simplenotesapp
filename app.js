@@ -761,8 +761,8 @@ class NotesApp {
         console.log('showSessionSummary called, timerRanOut:', timerRanOut);
 
         // Calculate actual time elapsed
-        const now = new Date();
-        const elapsedMs = now.getTime() - this.timerState.startTime.getTime();
+        const now = Date.now();
+        const elapsedMs = now - this.timerState.startTime; // startTime is already a timestamp
         const actualMinutes = Math.round(elapsedMs / 60000);
 
         const plannedMinutes = this.timerState.initialPlannedMinutes;
