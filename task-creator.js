@@ -673,6 +673,17 @@
     function openModalForEdit(id, type) {
         if (!window.app) return;
 
+        // IMPORTANT: Open modal FIRST (which resets everything),
+        // THEN populate with edit data
+        const context = type === 'note'
+            ? { mode: 'edit-note', noteId: id }
+            : { mode: 'edit-stack', stackId: id };
+
+        // Show modal and reset (this clears everything)
+        creatorContext = context;
+        modal.style.display = 'flex';
+        resetModal();
+
         if (type === 'note') {
             // Find note
             const note = window.app.notes.find(n => n.id === id);
@@ -703,14 +714,15 @@
             // Change button text
             submitBtn.textContent = 'Speichern';
 
-            openModal({ mode: 'edit-note', noteId: id });
+            // Focus content input
+            contentInput.focus();
 
         } else if (type === 'stack') {
             // Find stack
             const stack = window.app.stacks.find(s => s.id === id);
             if (!stack) return;
 
-            // Load all notes in stack
+            // Load all notes in stack (AFTER reset!)
             tasks = stack.noteIds.map(noteId => {
                 const note = window.app.notes.find(n => n.id === noteId);
                 if (!note) return null;
@@ -752,7 +764,8 @@
             // Change button text
             submitBtn.textContent = 'Speichern';
 
-            openModal({ mode: 'edit-stack', stackId: id });
+            // Focus content input for adding more tasks
+            contentInput.focus();
         }
     }
 
