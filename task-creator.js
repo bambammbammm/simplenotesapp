@@ -39,6 +39,7 @@
     let currentPriority = '';
     let currentStackType = 'none';
     let creatorContext = null; // For Plan mode: stores cursor position/element
+    let editingTaskId = null; // ID of task being edited (null if creating new)
 
     // ============================================
     // OPEN/CLOSE MODAL
@@ -87,6 +88,9 @@
         delete modal.dataset.editMode;
         delete modal.dataset.editId;
         submitBtn.textContent = 'Erstellen';
+
+        // Clear task editing state
+        editingTaskId = null;
     }
 
     // ============================================
@@ -173,22 +177,42 @@
             return;
         }
 
-        const task = {
-            id: Date.now() + Math.random(),
-            content: content,
-            timeMinutes: timeInput.value ? parseInt(timeInput.value) : null,
-            category: categorySelect.value || null,
-            uClass: (categorySelect.value === 'u' ? classSelect.value : null),
-            priority: currentPriority || null,
-            assignedDay: daySelect.value || null
-        };
+        if (editingTaskId !== null) {
+            // UPDATE existing task
+            const task = tasks.find(t => t.id === editingTaskId);
+            if (task) {
+                task.content = content;
+                task.timeMinutes = timeInput.value ? parseInt(timeInput.value) : null;
+                task.category = categorySelect.value || null;
+                task.uClass = (categorySelect.value === 'u' ? classSelect.value : null);
+                task.priority = currentPriority || null;
+                task.assignedDay = daySelect.value || null;
+            }
+            editingTaskId = null;
+        } else {
+            // CREATE new task
+            const task = {
+                id: Date.now() + Math.random(),
+                content: content,
+                timeMinutes: timeInput.value ? parseInt(timeInput.value) : null,
+                category: categorySelect.value || null,
+                uClass: (categorySelect.value === 'u' ? classSelect.value : null),
+                priority: currentPriority || null,
+                assignedDay: daySelect.value || null
+            };
+            tasks.push(task);
+        }
 
-        tasks.push(task);
         renderTaskList();
 
         // Clear inputs for next task
         contentInput.value = '';
         timeInput.value = '';
+        categorySelect.value = '';
+        classGroup.style.display = 'none';
+        daySelect.value = '';
+        currentPriority = '';
+        priorityButtons.forEach(btn => btn.classList.remove('active'));
         contentInput.focus();
 
         // Show task list and stack options
@@ -198,6 +222,12 @@
 
     function removeTask(taskId) {
         tasks = tasks.filter(t => t.id !== taskId);
+
+        // If we were editing this task, cancel edit mode
+        if (editingTaskId === taskId) {
+            editingTaskId = null;
+        }
+
         renderTaskList();
 
         // Hide list if empty
@@ -205,6 +235,38 @@
             taskList.style.display = 'none';
             stackOptions.style.display = 'none';
         }
+    }
+
+    function loadTaskForEditing(taskId) {
+        const task = tasks.find(t => t.id === taskId);
+        if (!task) return;
+
+        // Set editing state
+        editingTaskId = taskId;
+
+        // Load task data into inputs
+        contentInput.value = task.content;
+        timeInput.value = task.timeMinutes || '';
+        categorySelect.value = task.category || '';
+
+        if (task.category === 'u' && task.uClass) {
+            classGroup.style.display = 'block';
+            classSelect.value = task.uClass;
+        } else {
+            classGroup.style.display = 'none';
+        }
+
+        daySelect.value = task.assignedDay || '';
+
+        // Set priority
+        currentPriority = task.priority || '';
+        priorityButtons.forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.value === currentPriority);
+        });
+
+        // Focus content input
+        contentInput.focus();
+        contentInput.select(); // Select text for easy replacement
     }
 
     function moveTaskUp(taskId) {
@@ -251,9 +313,13 @@
             const upDisabled = index === 0 ? 'disabled' : '';
             const downDisabled = index === tasks.length - 1 ? 'disabled' : '';
 
+            // Highlight if being edited
+            const isEditing = editingTaskId === task.id;
+            const editingClass = isEditing ? ' editing' : '';
+
             return `
-                <div class="task-creator-list-item">
-                    <span>${task.content} ${badges}</span>
+                <div class="task-creator-list-item${editingClass}" data-task-id="${task.id}">
+                    <span class="task-creator-list-item-content">${task.content} ${badges}</span>
                     <div class="task-creator-list-item-actions">
                         ${showReorder ? `
                             <button class="task-creator-list-item-up" data-task-id="${task.id}" ${upDisabled}>↑</button>
@@ -266,6 +332,17 @@
         }).join('');
 
         taskListItems.innerHTML = html;
+
+        // Add double-click handlers to edit tasks
+        taskListItems.querySelectorAll('.task-creator-list-item').forEach(item => {
+            const taskId = parseFloat(item.dataset.taskId);
+
+            item.addEventListener('dblclick', (e) => {
+                // Don't trigger if clicking on buttons
+                if (e.target.closest('button')) return;
+                loadTaskForEditing(taskId);
+            });
+        });
 
         // Add remove handlers
         taskListItems.querySelectorAll('.task-creator-list-item-remove').forEach(btn => {

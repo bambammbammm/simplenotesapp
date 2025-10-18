@@ -296,6 +296,23 @@ body {
     background: #1a1a1a;
     border-radius: 4px;
     font-size: 12px;
+    cursor: pointer;
+    transition: background 0.2s, border 0.2s;
+    border: 1px solid transparent;
+}
+
+.task-creator-list-item:hover {
+    background: #252525;
+}
+
+.task-creator-list-item.editing {
+    background: #1a2a3a;
+    border: 1px solid #3498db;
+}
+
+.task-creator-list-item-content {
+    flex: 1;
+    pointer-events: none; /* Prevent double-click text selection */
 }
 
 .task-creator-list-item-actions {
