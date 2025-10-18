@@ -714,6 +714,18 @@
                 range.collapse(true);
                 selection.removeAllRanges();
                 selection.addRange(range);
+
+                // Focus editor and re-set cursor position after a short delay
+                // This ensures cursor position persists after modal close
+                setTimeout(() => {
+                    planEditor.focus();
+                    const newRange = document.createRange();
+                    newRange.setStartAfter(space);
+                    newRange.collapse(true);
+                    const newSelection = window.getSelection();
+                    newSelection.removeAllRanges();
+                    newSelection.addRange(newRange);
+                }, 10);
             } else {
                 // Normal insert at cursor position
                 range.insertNode(icon);
@@ -727,11 +739,34 @@
                 range.collapse(true);
                 selection.removeAllRanges();
                 selection.addRange(range);
+
+                // Focus editor and re-set cursor position after a short delay
+                setTimeout(() => {
+                    planEditor.focus();
+                    const newRange = document.createRange();
+                    newRange.setStartAfter(space);
+                    newRange.collapse(true);
+                    const newSelection = window.getSelection();
+                    newSelection.removeAllRanges();
+                    newSelection.addRange(newRange);
+                }, 10);
             }
         } else {
             // Append to end if no valid cursor position
             planEditor.appendChild(icon);
-            planEditor.appendChild(document.createTextNode(' '));
+            const space = document.createTextNode(' ');
+            planEditor.appendChild(space);
+
+            // Focus and set cursor after space
+            setTimeout(() => {
+                planEditor.focus();
+                const range = document.createRange();
+                range.setStartAfter(space);
+                range.collapse(true);
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(range);
+            }, 10);
         }
 
         // Save plan text
@@ -788,6 +823,17 @@
                 range.collapse(true);
                 selection.removeAllRanges();
                 selection.addRange(range);
+
+                // Focus editor and re-set cursor position after a short delay
+                setTimeout(() => {
+                    planEditor.focus();
+                    const newRange = document.createRange();
+                    newRange.setStartAfter(space);
+                    newRange.collapse(true);
+                    const newSelection = window.getSelection();
+                    newSelection.removeAllRanges();
+                    newSelection.addRange(newRange);
+                }, 10);
             } else {
                 // Normal insert at cursor position
                 range.insertNode(icon);
@@ -801,11 +847,34 @@
                 range.collapse(true);
                 selection.removeAllRanges();
                 selection.addRange(range);
+
+                // Focus editor and re-set cursor position after a short delay
+                setTimeout(() => {
+                    planEditor.focus();
+                    const newRange = document.createRange();
+                    newRange.setStartAfter(space);
+                    newRange.collapse(true);
+                    const newSelection = window.getSelection();
+                    newSelection.removeAllRanges();
+                    newSelection.addRange(newRange);
+                }, 10);
             }
         } else {
             // Append to end if no valid cursor position
             planEditor.appendChild(icon);
-            planEditor.appendChild(document.createTextNode(' '));
+            const space = document.createTextNode(' ');
+            planEditor.appendChild(space);
+
+            // Focus and set cursor after space
+            setTimeout(() => {
+                planEditor.focus();
+                const range = document.createRange();
+                range.setStartAfter(space);
+                range.collapse(true);
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(range);
+            }, 10);
         }
 
         // Save plan text
