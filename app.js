@@ -814,8 +814,8 @@ class NotesApp {
             this.sessionDifference.textContent = 'Genau nach Plan! 👌';
         }
 
-        // Show summary
-        this.sessionSummary.style.display = 'block';
+        // Show summary modal
+        this.sessionSummary.style.display = 'flex';
 
         // Update header display
         this.updateTimeStats();
