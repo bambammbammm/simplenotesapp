@@ -423,6 +423,12 @@ class NotesApp {
         this.notes.unshift(note); // Add to beginning of array
         this.saveNotes();
         this.noteInput.value = '';
+
+        // Close input modal if it's open
+        if (window.UI_REDESIGN && window.UI_REDESIGN.closeInputModal) {
+            window.UI_REDESIGN.closeInputModal();
+        }
+
         this.render();
 
         // Add to undo stack

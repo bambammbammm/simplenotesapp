@@ -366,12 +366,51 @@
         sessionSummaryModal.style.display = 'none';
     });
 
+    // ============================================
+    // INPUT MODAL (triggered by 'n' key)
+    // ============================================
+
+    const inputModal = document.getElementById('inputModal');
+    const noteInput = document.getElementById('noteInput');
+
+    function openInputModal() {
+        inputModal.style.display = 'flex';
+        noteInput.value = '';
+        noteInput.focus();
+    }
+
+    function closeInputModal() {
+        inputModal.style.display = 'none';
+        noteInput.value = '';
+    }
+
+    // Click overlay to close
+    inputModal?.querySelector('.input-modal-overlay')?.addEventListener('click', closeInputModal);
+
+    // Keyboard shortcut: 'n' key
+    document.addEventListener('keydown', (e) => {
+        // Only trigger if not in input/textarea/contenteditable
+        const inInput = e.target.matches('input, textarea') || e.target.isContentEditable;
+
+        if (e.key === 'n' && !inInput && !e.metaKey && !e.ctrlKey) {
+            e.preventDefault();
+            openInputModal();
+        }
+
+        // ESC to close modal
+        if (e.key === 'Escape' && inputModal.style.display === 'flex') {
+            closeInputModal();
+        }
+    });
+
     // Expose functions for app.js to call
     window.UI_REDESIGN = {
         updateHeaderViewName,
         updateBottomBarVisibility,
         openFilterPalette,
         closeFilterPalette,
+        openInputModal,
+        closeInputModal,
         showSessionSummary: () => {
             sessionSummaryModal.style.display = 'flex';
         }
