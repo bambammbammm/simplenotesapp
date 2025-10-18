@@ -298,6 +298,14 @@ body {
     font-size: 12px;
 }
 
+.task-creator-list-item-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.task-creator-list-item-up,
+.task-creator-list-item-down,
 .task-creator-list-item-remove {
     background: none;
     border: none;
@@ -306,6 +314,17 @@ body {
     padding: 0 6px;
     font-size: 16px;
     transition: color 0.2s;
+}
+
+.task-creator-list-item-up:hover,
+.task-creator-list-item-down:hover {
+    color: #3498db;
+}
+
+.task-creator-list-item-up:disabled,
+.task-creator-list-item-down:disabled {
+    color: #333;
+    cursor: not-allowed;
 }
 
 .task-creator-list-item-remove:hover {

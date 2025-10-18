@@ -2018,7 +2018,12 @@ class NotesApp {
         // Only badge opens modal, not the whole container
         badge.addEventListener('click', (e) => {
             e.stopPropagation();
-            this.openStackModal(stack.id);
+            // Use new task creator modal for editing
+            if (window.TASK_CREATOR && window.TASK_CREATOR.openModalForEdit) {
+                window.TASK_CREATOR.openModalForEdit(stack.id, 'stack');
+            } else {
+                this.openStackModal(stack.id); // Fallback to old modal
+            }
         });
 
         container.appendChild(badge);
@@ -2165,7 +2170,12 @@ class NotesApp {
             // Only trigger if clicking on the container itself or stacked cards
             // but not if clicking on buttons
             if (!e.target.closest('button')) {
-                this.openStackModal(stack.id);
+                // Use new task creator modal for editing
+                if (window.TASK_CREATOR && window.TASK_CREATOR.openModalForEdit) {
+                    window.TASK_CREATOR.openModalForEdit(stack.id, 'stack');
+                } else {
+                    this.openStackModal(stack.id); // Fallback to old modal
+                }
             }
         });
 

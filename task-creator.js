@@ -82,6 +82,11 @@
         stackTypeButtons.forEach(btn => {
             btn.classList.toggle('active', btn.dataset.type === 'none');
         });
+
+        // Clear edit mode
+        delete modal.dataset.editMode;
+        delete modal.dataset.editId;
+        submitBtn.textContent = 'Erstellen';
     }
 
     // ============================================
@@ -202,8 +207,26 @@
         }
     }
 
+    function moveTaskUp(taskId) {
+        const index = tasks.findIndex(t => t.id === taskId);
+        if (index > 0) {
+            // Swap with previous task
+            [tasks[index - 1], tasks[index]] = [tasks[index], tasks[index - 1]];
+            renderTaskList();
+        }
+    }
+
+    function moveTaskDown(taskId) {
+        const index = tasks.findIndex(t => t.id === taskId);
+        if (index < tasks.length - 1) {
+            // Swap with next task
+            [tasks[index], tasks[index + 1]] = [tasks[index + 1], tasks[index]];
+            renderTaskList();
+        }
+    }
+
     function renderTaskList() {
-        const html = tasks.map(task => {
+        const html = tasks.map((task, index) => {
             let badges = '';
 
             if (task.timeMinutes) {
@@ -223,10 +246,21 @@
                 badges += ` <span style="color: #f39c12;">${task.priority}</span>`;
             }
 
+            // Show reorder buttons only if more than 1 task
+            const showReorder = tasks.length > 1;
+            const upDisabled = index === 0 ? 'disabled' : '';
+            const downDisabled = index === tasks.length - 1 ? 'disabled' : '';
+
             return `
                 <div class="task-creator-list-item">
                     <span>${task.content} ${badges}</span>
-                    <button class="task-creator-list-item-remove" data-task-id="${task.id}">×</button>
+                    <div class="task-creator-list-item-actions">
+                        ${showReorder ? `
+                            <button class="task-creator-list-item-up" data-task-id="${task.id}" ${upDisabled}>↑</button>
+                            <button class="task-creator-list-item-down" data-task-id="${task.id}" ${downDisabled}>↓</button>
+                        ` : ''}
+                        <button class="task-creator-list-item-remove" data-task-id="${task.id}">×</button>
+                    </div>
                 </div>
             `;
         }).join('');
@@ -240,6 +274,21 @@
                 removeTask(taskId);
             });
         });
+
+        // Add up/down handlers
+        taskListItems.querySelectorAll('.task-creator-list-item-up').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const taskId = parseFloat(btn.dataset.taskId);
+                moveTaskUp(taskId);
+            });
+        });
+
+        taskListItems.querySelectorAll('.task-creator-list-item-down').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const taskId = parseFloat(btn.dataset.taskId);
+                moveTaskDown(taskId);
+            });
+        });
     }
 
     // ============================================
@@ -247,6 +296,23 @@
     // ============================================
 
     function handleSubmit() {
+        // Check if in edit mode
+        const editMode = modal.dataset.editMode;
+        const editId = parseFloat(modal.dataset.editId);
+
+        if (editMode === 'note') {
+            // Update existing note
+            updateNote(editId);
+            closeModal();
+            return;
+        } else if (editMode === 'stack') {
+            // Update existing stack
+            updateStack(editId);
+            closeModal();
+            return;
+        }
+
+        // CREATE MODE (not edit)
         // Check if we have any tasks
         const hasCurrentInput = contentInput.value.trim().length > 0;
 
@@ -364,6 +430,134 @@
         }
 
         console.log('Stack created:', stack, notes);
+    }
+
+    function updateNote(noteId) {
+        // Find the note
+        const note = window.app.notes.find(n => n.id === noteId);
+        if (!note) return;
+
+        // Get values from modal - either from contentInput (single note edit) or tasks[0] (if added to list)
+        let content, timeMinutes, category, uClass, priority, assignedDay;
+
+        if (tasks.length > 0) {
+            // User added task to list - use first task
+            const task = tasks[0];
+            content = task.content;
+            timeMinutes = task.timeMinutes;
+            category = task.category;
+            uClass = task.uClass;
+            priority = task.priority;
+            assignedDay = task.assignedDay;
+        } else {
+            // User editing directly in inputs without adding to list
+            content = contentInput.value.trim();
+            timeMinutes = timeInput.value ? parseInt(timeInput.value) : null;
+            category = categorySelect.value || null;
+            uClass = (categorySelect.value === 'u' ? classSelect.value : null);
+            priority = currentPriority || null;
+            assignedDay = daySelect.value || null;
+        }
+
+        // Update note
+        note.content = content;
+        note.timeMinutes = timeMinutes;
+        note.category = category;
+        note.uClass = uClass;
+        note.priority = priority;
+        note.assignedDay = assignedDay;
+
+        // Save and render
+        window.app.saveNotes();
+        window.app.render();
+
+        // Update icon title if in plan mode
+        const icon = document.querySelector(`.plan-task-icon[data-note-id="${noteId}"]`);
+        if (icon) {
+            icon.title = content;
+        }
+
+        console.log('Note updated:', note);
+    }
+
+    function updateStack(stackId) {
+        // Find the stack
+        const stack = window.app.stacks.find(s => s.id === stackId);
+        if (!stack) return;
+
+        // Get current note IDs before update
+        const oldNoteIds = [...stack.noteIds];
+
+        // Update stack metadata
+        stack.type = currentStackType === 'group' ? 'group' : 'sequential';
+        stack.title = stackTitleInput.value.trim() || 'Untitled Stack';
+
+        // Handle task changes
+        // Get the new task order from tasks array
+        const newTaskIds = tasks.map(t => t.id);
+        const newNoteIds = [];
+
+        // Update existing notes and track which ones are still in the stack
+        newTaskIds.forEach(taskId => {
+            const task = tasks.find(t => t.id === taskId);
+            let note = window.app.notes.find(n => n.id === taskId);
+
+            if (note) {
+                // Update existing note
+                note.content = task.content;
+                note.timeMinutes = task.timeMinutes;
+                note.category = task.category;
+                note.uClass = task.uClass;
+                note.priority = task.priority;
+                note.assignedDay = task.assignedDay;
+                note.stackId = stackId;
+                newNoteIds.push(note.id);
+            } else {
+                // Create new note (task was added in edit mode)
+                note = {
+                    id: taskId,
+                    content: task.content,
+                    timestamp: new Date().toISOString(),
+                    completed: false,
+                    stackId: stackId,
+                    category: task.category,
+                    uClass: task.uClass,
+                    timeMinutes: task.timeMinutes,
+                    focused: false,
+                    assignedDay: task.assignedDay,
+                    priority: task.priority
+                };
+                window.app.notes.push(note);
+                newNoteIds.push(note.id);
+            }
+        });
+
+        // Remove notes that were deleted from stack
+        const removedNoteIds = oldNoteIds.filter(id => !newNoteIds.includes(id));
+        removedNoteIds.forEach(noteId => {
+            const note = window.app.notes.find(n => n.id === noteId);
+            if (note) {
+                // Unstack the note (set stackId to null)
+                note.stackId = null;
+            }
+        });
+
+        // Update stack noteIds (in same order as tasks array - reversed for stack display)
+        stack.noteIds = newNoteIds.reverse();
+
+        // Save and render
+        window.app.saveNotes();
+        window.app.saveStacks();
+        window.app.render();
+
+        // Update icon if in plan mode
+        const icon = document.querySelector(`.plan-stack-icon[data-stack-id="${stackId}"]`);
+        if (icon) {
+            icon.textContent = stack.type === 'group' ? '⊞' : '⊟';
+            icon.title = stack.title;
+        }
+
+        console.log('Stack updated:', stack);
     }
 
     // ============================================
@@ -591,7 +785,8 @@
 
     window.TASK_CREATOR = {
         openModal,
-        closeModal
+        closeModal,
+        openModalForEdit
     };
 
 })();
