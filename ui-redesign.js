@@ -317,39 +317,9 @@
     setTimeout(updateHeaderViewName, 100);
 
     // ============================================
-    // BOTTOM BAR (replaces sidebar)
+    // HEADER WORK SECTION (Timer in header)
     // ============================================
-
-    const bottomBar = document.getElementById('bottomBar');
-
-    // Update visibility based on focused notes
-    function updateBottomBarVisibility() {
-        // Check if there are focused notes
-        const focusedNotes = document.querySelectorAll('.note-card.focused');
-
-        if (focusedNotes.length > 0) {
-            bottomBar.style.display = 'flex';
-        } else {
-            bottomBar.style.display = 'none';
-        }
-    }
-
-    // Watch for focus changes (using MutationObserver)
-    const notesObserver = new MutationObserver(() => {
-        updateBottomBarVisibility();
-    });
-
-    const notesCanvas = document.getElementById('notesCanvas');
-    if (notesCanvas) {
-        notesObserver.observe(notesCanvas, {
-            attributes: true,
-            attributeFilter: ['class'],
-            subtree: true
-        });
-    }
-
-    // Initial check
-    setTimeout(updateBottomBarVisibility, 100);
+    // Now handled by app.js directly (no observer needed)
 
     // ============================================
     // SESSION SUMMARY MODAL
@@ -406,7 +376,6 @@
     // Expose functions for app.js to call
     window.UI_REDESIGN = {
         updateHeaderViewName,
-        updateBottomBarVisibility,
         openFilterPalette,
         closeFilterPalette,
         openInputModal,

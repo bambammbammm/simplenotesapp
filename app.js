@@ -57,8 +57,8 @@ class NotesApp {
         this.undoDropdownClose = document.getElementById('undoDropdownClose');
         this.undoHistoryList = document.getElementById('undoHistoryList');
 
-        // Work Timer (UI Redesign: now using bottom bar)
-        this.workSidebar = document.getElementById('bottomBar'); // Changed from 'workSidebar' to 'bottomBar'
+        // Work Timer (UI Redesign: now in header)
+        this.workSidebar = document.getElementById('headerWorkSection');
         this.workTimeTotal = document.getElementById('workTimeTotal');
         this.workTimer = document.getElementById('workTimer');
         this.timerDisplay = document.getElementById('timerDisplay');

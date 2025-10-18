@@ -7,8 +7,8 @@
     <meta name="theme-color" content="#0f0f0f">
     <title>Simple Notes App</title>
     <link rel="icon" type="image/png" href="icon-192.png">
-    <link rel="manifest" href="manifest.json?v=28">
-    <link rel="stylesheet" href="style.css?v=28">
+    <link rel="manifest" href="manifest.json?v=29">
+    <link rel="stylesheet" href="style.css?v=29">
 </head>
 <body>
     <div class="app-container">
@@ -43,6 +43,19 @@
 
                 <div class="header-actions">
                     <div class="header-session-stat" id="headerSessionStat" style="display: none;"></div>
+
+                    <!-- Work Timer in Header -->
+                    <div class="header-work-section" id="headerWorkSection" style="display: none;">
+                        <div class="header-work-time">
+                            <span class="header-work-time-value" id="workTimeTotal">0m</span>
+                        </div>
+                        <div class="header-work-timer" id="workTimer" style="display: none;">
+                            <span class="header-timer-display" id="timerDisplay">00:00:00</span>
+                            <button class="header-timer-btn" id="pauseBtn" title="Pause">‖</button>
+                            <button class="header-timer-btn" id="stopBtn" title="Stop">□</button>
+                        </div>
+                        <button class="header-start-work-btn" id="startWorkBtn">▶ Start</button>
+                    </div>
 
                     <button class="filter-palette-trigger" id="filterPaletteTrigger" title="Filter öffnen (/)">
                         <span id="filterActiveCount">Filter</span>
@@ -300,52 +313,25 @@ Tipp: Schreiben Sie (Task-Name 30m --k) um automatisch eine Aufgabe zu erstellen
         </div>
     </div>
 
-    <!-- Bottom Bar: Focus Section -->
-    <div class="bottom-bar" id="bottomBar" style="display: none;">
-        <div class="bottom-bar-title">Fokussierte Aufgaben</div>
-        <div class="bottom-bar-stats">
-            <div class="focus-time-display">
-                <span class="focus-time" id="workTimeTotal">0m</span>
-                <span class="focus-label">gesamt</span>
-            </div>
-            <div class="focus-count" id="focusCountDisplay" style="display: none;"></div>
-        </div>
-
-        <!-- Timer Display (when running) -->
-        <div class="bottom-timer" id="workTimer" style="display: none;">
-            <div class="timer-display" id="timerDisplay">00:00:00</div>
-            <div class="end-time-display" id="endTimeDisplay" style="display: none;">
-                <span class="end-time-label">Endet um</span>
-                <span class="end-time-value" id="endTimeValue">--:--</span>
-            </div>
-            <div class="timer-controls">
-                <button class="timer-btn pause-btn" id="pauseBtn">‖ Pause</button>
-                <button class="timer-btn stop-btn" id="stopBtn">□ Stop</button>
-            </div>
-        </div>
-
-        <button class="start-work-btn" id="startWorkBtn">▶ Start Work</button>
-
-        <!-- Session Summary Modal (overlay) -->
-        <div class="session-summary-modal" id="sessionSummaryModal" style="display: none;">
-            <div class="session-summary-overlay"></div>
-            <div class="session-summary-box">
-                <div class="session-summary-title">Session beendet!</div>
-                <div class="session-summary-content">
-                    <div class="session-stat">
-                        <span class="session-stat-label">Geplant:</span>
-                        <span class="session-stat-value" id="sessionPlanned">0m</span>
-                    </div>
-                    <div class="session-stat">
-                        <span class="session-stat-label">Tatsächlich:</span>
-                        <span class="session-stat-value" id="sessionActual">0m</span>
-                    </div>
-                    <div class="session-difference" id="sessionDifference">
-                        <!-- Will show "+5m schneller" or "-5m länger" -->
-                    </div>
+    <!-- Session Summary Modal (overlay) -->
+    <div class="session-summary-modal" id="sessionSummaryModal" style="display: none;">
+        <div class="session-summary-overlay"></div>
+        <div class="session-summary-box">
+            <div class="session-summary-title">Session beendet!</div>
+            <div class="session-summary-content">
+                <div class="session-stat">
+                    <span class="session-stat-label">Geplant:</span>
+                    <span class="session-stat-value" id="sessionPlanned">0m</span>
                 </div>
-                <button class="session-summary-close" id="sessionSummaryClose">OK</button>
+                <div class="session-stat">
+                    <span class="session-stat-label">Tatsächlich:</span>
+                    <span class="session-stat-value" id="sessionActual">0m</span>
+                </div>
+                <div class="session-difference" id="sessionDifference">
+                    <!-- Will show "+5m schneller" or "-5m länger" -->
+                </div>
             </div>
+            <button class="session-summary-close" id="sessionSummaryClose">OK</button>
         </div>
     </div>
 
@@ -391,8 +377,8 @@ Tipp: Schreiben Sie (Task-Name 30m --k) um automatisch eine Aufgabe zu erstellen
         </div>
     </div>
 
-    <script src="app.js?v=28"></script>
-    <script src="ui-redesign.js?v=28"></script>
+    <script src="app.js?v=29"></script>
+    <script src="ui-redesign.js?v=29"></script>
     <script>
         // Register Service Worker for PWA
         if ('serviceWorker' in navigator) {
