@@ -314,6 +314,115 @@ Tipp: Schreiben Sie (Task-Name 30m --k) um automatisch eine Aufgabe zu erstellen
         </div>
     </div>
 
+    <!-- Universal Task/Stack Creator Modal (Option+N) -->
+    <div class="task-creator-modal" id="taskCreatorModal" style="display: none;">
+        <div class="task-creator-overlay"></div>
+        <div class="task-creator-box">
+            <div class="task-creator-header">
+                <span class="task-creator-title">Task / Stack erstellen</span>
+                <button class="task-creator-close" id="taskCreatorClose">×</button>
+            </div>
+
+            <div class="task-creator-content">
+                <!-- Current Task Input -->
+                <div class="task-input-section">
+                    <div class="task-input-group">
+                        <label>Content</label>
+                        <input type="text" id="taskCreatorContent" class="task-creator-input" placeholder="Task-Name">
+                    </div>
+
+                    <div class="task-input-row">
+                        <div class="task-input-group">
+                            <label>Zeit</label>
+                            <input type="number" id="taskCreatorTime" class="task-creator-input-small" placeholder="30"> min
+                        </div>
+
+                        <div class="task-input-group">
+                            <label>Kategorie</label>
+                            <select id="taskCreatorCategory" class="task-creator-select">
+                                <option value="">Keine</option>
+                                <option value="k">KSWIL</option>
+                                <option value="h">HSLU</option>
+                                <option value="p">Privat</option>
+                                <option value="u">Unterricht</option>
+                            </select>
+                        </div>
+
+                        <div class="task-input-group" id="taskCreatorClassGroup" style="display: none;">
+                            <label>Klasse</label>
+                            <select id="taskCreatorClass" class="task-creator-select">
+                                <option value="2a">2a</option>
+                                <option value="2b">2b</option>
+                                <option value="2c">2c</option>
+                                <option value="3a">3a</option>
+                                <option value="3b">3b</option>
+                                <option value="5">5</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="task-input-row">
+                        <div class="task-input-group">
+                            <label>Priorität</label>
+                            <div class="priority-buttons">
+                                <button class="priority-btn" data-value="">Keine</button>
+                                <button class="priority-btn" data-value="!">!</button>
+                                <button class="priority-btn" data-value="!!">!!</button>
+                                <button class="priority-btn" data-value="!!!">!!!</button>
+                            </div>
+                        </div>
+
+                        <div class="task-input-group">
+                            <label>Tag</label>
+                            <select id="taskCreatorDay" class="task-creator-select">
+                                <option value="">Nicht zugewiesen</option>
+                                <option value="monday">Montag</option>
+                                <option value="tuesday">Dienstag</option>
+                                <option value="wednesday">Mittwoch</option>
+                                <option value="thursday">Donnerstag</option>
+                                <option value="friday">Freitag</option>
+                                <option value="saturday">Samstag</option>
+                                <option value="sunday">Sonntag</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button class="task-creator-add-btn" id="taskCreatorAddBtn">+ Weitere Task hinzufügen</button>
+                </div>
+
+                <!-- Tasks List -->
+                <div class="task-creator-list" id="taskCreatorList" style="display: none;">
+                    <div class="task-creator-list-header">Tasks:</div>
+                    <div class="task-creator-list-items" id="taskCreatorListItems">
+                        <!-- Tasks will be inserted here -->
+                    </div>
+                </div>
+
+                <!-- Stack Options -->
+                <div class="task-creator-stack-options" id="taskCreatorStackOptions" style="display: none;">
+                    <div class="stack-type-group">
+                        <label>Stack-Typ:</label>
+                        <div class="stack-type-buttons">
+                            <button class="stack-type-btn active" data-type="none">Keine</button>
+                            <button class="stack-type-btn" data-type="group">Group (+)</button>
+                            <button class="stack-type-btn" data-type="sequential">Sequential (→)</button>
+                        </div>
+                    </div>
+
+                    <div class="task-input-group" id="taskCreatorStackTitleGroup" style="display: none;">
+                        <label>Stack-Titel</label>
+                        <input type="text" id="taskCreatorStackTitle" class="task-creator-input" placeholder="Stack-Name">
+                    </div>
+                </div>
+            </div>
+
+            <div class="task-creator-actions">
+                <button class="task-creator-cancel" id="taskCreatorCancel">Abbrechen</button>
+                <button class="task-creator-submit" id="taskCreatorSubmit">Erstellen</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Session Summary Modal (overlay) -->
     <div class="session-summary-modal" id="sessionSummaryModal" style="display: none;">
         <div class="session-summary-overlay"></div>

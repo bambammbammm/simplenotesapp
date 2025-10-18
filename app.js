@@ -3088,6 +3088,72 @@ class NotesApp {
         const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
         const cmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
 
+        // Enter: Check if we have > task syntax in current line
+        if (e.key === 'Enter' && !cmdOrCtrl && !e.shiftKey) {
+            const selection = window.getSelection();
+            if (selection.rangeCount > 0) {
+                const range = selection.getRangeAt(0);
+                const currentNode = range.startContainer;
+
+                // Find the div containing current line
+                let lineElement = currentNode.nodeType === Node.TEXT_NODE ? currentNode.parentElement : currentNode;
+                while (lineElement && lineElement.tagName !== 'DIV' && lineElement !== this.planEditor) {
+                    lineElement = lineElement.parentElement;
+                }
+
+                if (lineElement && lineElement.tagName === 'DIV') {
+                    const lineText = lineElement.textContent;
+
+                    // Check if line contains > anywhere (not just at start)
+                    const taskPattern = />([^<>\n]+)/g;
+                    const matches = [...lineText.matchAll(taskPattern)];
+
+                    if (matches.length > 0) {
+                        e.preventDefault();
+
+                        // Process all > task patterns in the line
+                        matches.forEach(match => {
+                            const fullMatch = match[0]; // "> content"
+                            const taskContent = match[1].trim(); // "content"
+
+                            if (taskContent) {
+                                // Create widget for this task
+                                const note = this.parseAndCreateNote(taskContent);
+
+                                if (note) {
+                                    // Replace "> content" with widget in HTML
+                                    const widget = this.createPlanTaskWidget(note);
+                                    const currentHTML = lineElement.innerHTML;
+
+                                    // Escape special regex chars in the match
+                                    const escapedMatch = fullMatch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                                    const newHTML = currentHTML.replace(new RegExp(escapedMatch), widget);
+
+                                    lineElement.innerHTML = newHTML;
+                                }
+                            }
+                        });
+
+                        // Add new line after processing
+                        const newDiv = document.createElement('div');
+                        newDiv.innerHTML = '<br>';
+                        lineElement.parentNode.insertBefore(newDiv, lineElement.nextSibling);
+
+                        // Move cursor to new line
+                        const newRange = document.createRange();
+                        newRange.setStart(newDiv, 0);
+                        newRange.collapse(true);
+                        selection.removeAllRanges();
+                        selection.addRange(newRange);
+
+                        this.savePlanText();
+
+                        return;
+                    }
+                }
+            }
+        }
+
         // Bold: Cmd/Ctrl + B
         if (cmdOrCtrl && e.key === 'b') {
             e.preventDefault();
@@ -3430,6 +3496,101 @@ class NotesApp {
         return clone.textContent || clone.innerText || '';
     }
 
+    parseAndCreateNote(taskContent) {
+        // Parse task content and create note
+        // Returns the created note object or null
+        let content = taskContent;
+        let category = null;
+        let uClass = null;
+        let timeMinutes = null;
+        let priority = null;
+
+        // Extract category - check for --u with class first
+        const uCategoryMatch = content.match(/--u(2a|2b|2c|3a|3b|5)/);
+        if (uCategoryMatch) {
+            category = 'u';
+            uClass = uCategoryMatch[1];
+            content = content.replace(/--u(2a|2b|2c|3a|3b|5)/, '').trim();
+        } else {
+            const categoryMatch = content.match(/--([khp])/);
+            if (categoryMatch) {
+                category = categoryMatch[1];
+                content = content.replace(/--[khp]/, '').trim();
+            }
+        }
+
+        // Extract priority (!, !!, !!!)
+        const priorityMatch = content.match(/(!{1,3})/);
+        if (priorityMatch) {
+            priority = priorityMatch[1];
+            content = content.replace(/!{1,3}/, '').trim();
+        }
+
+        // Extract time (e.g., "30m")
+        const timeMatch = content.match(/(\d+)m/);
+        if (timeMatch) {
+            timeMinutes = parseInt(timeMatch[1]);
+            content = content.replace(/\d+m/, '').trim();
+        }
+
+        // Clean up extra whitespace
+        content = content.replace(/\s+/g, ' ').trim();
+
+        if (content) {
+            // Create the note
+            const note = {
+                id: Date.now() + Math.random(),
+                content: content,
+                timestamp: new Date().toISOString(),
+                completed: false,
+                stackId: null,
+                category: category,
+                uClass: uClass,
+                timeMinutes: timeMinutes,
+                focused: false,
+                assignedDay: null,
+                priority: priority
+            };
+
+            this.notes.push(note);
+            this.newlyCreatedNoteIds.add(note.id);
+            this.saveNotes();
+            this.render();
+
+            // Add to undo stack
+            this.addToUndoStack({
+                type: 'createNote',
+                data: {
+                    noteId: note.id
+                }
+            });
+
+            console.log('Task created:', note);
+            return note;
+        }
+
+        return null;
+    }
+
+    createTaskWidgetFromLine(lineElement) {
+        // Legacy function - kept for backwards compatibility
+        const lineText = lineElement.textContent.trim();
+
+        // Remove > prefix
+        const taskContent = lineText.substring(1).trim();
+
+        if (!taskContent) return;
+
+        const note = this.parseAndCreateNote(taskContent);
+
+        if (note) {
+            // Replace line with widget
+            const widget = this.createPlanTaskWidget(note);
+            lineElement.innerHTML = widget;
+            this.savePlanText();
+        }
+    }
+
     handlePlanInputDebounced() {
         // Clear existing timer
         if (this.planInputDebounceTimer) {
@@ -3448,6 +3609,9 @@ class NotesApp {
     handlePlanInput() {
         // Get plain text for task parsing
         const text = this.getPlainText();
+
+        // NOTE: > prefix parsing moved to Enter key handler (createTaskWidgetFromLine)
+        // This prevents creating notes on every keystroke
 
         // First, parse for stack blocks: seq:/group: with bullet list
         // Example:
@@ -3731,6 +3895,61 @@ class NotesApp {
         if (saved) {
             this.planEditor.innerHTML = saved;
         }
+    }
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    createPlanTaskWidget(note) {
+        // Create a widget HTML for a task in plan view
+        // Format: [ Content | 30m | KSWIL | !! ]
+
+        let badges = '';
+
+        // Time badge
+        if (note.timeMinutes) {
+            badges += `<span class="widget-badge widget-time">${note.timeMinutes}m</span>`;
+        }
+
+        // Category badge
+        if (note.category) {
+            let categoryLabel = '';
+            let categoryClass = `widget-category-${note.category}`;
+
+            if (note.category === 'k') categoryLabel = 'KSWIL';
+            else if (note.category === 'h') categoryLabel = 'HSLU';
+            else if (note.category === 'p') categoryLabel = 'Privat';
+            else if (note.category === 'u') {
+                categoryLabel = `Unterricht ${note.uClass || ''}`;
+                categoryClass = `widget-category-u widget-class-${note.uClass}`;
+            }
+
+            badges += `<span class="widget-badge ${categoryClass}">${categoryLabel}</span>`;
+        }
+
+        // Priority badge
+        if (note.priority) {
+            const priorityLevel = note.priority.length; // !, !!, !!!
+            badges += `<span class="widget-badge widget-priority widget-priority-${priorityLevel}">${note.priority}</span>`;
+        }
+
+        // Day badge
+        if (note.assignedDay) {
+            const dayLabels = {
+                monday: 'Mo', tuesday: 'Di', wednesday: 'Mi',
+                thursday: 'Do', friday: 'Fr', saturday: 'Sa', sunday: 'So'
+            };
+            const dayLabel = dayLabels[note.assignedDay] || note.assignedDay;
+            badges += `<span class="widget-badge widget-day">${dayLabel}</span>`;
+        }
+
+        // Build widget HTML - use span wrapper for inline display
+        const widget = `<span class="plan-task-widget-wrapper"><span class="plan-task-widget" data-note-id="${note.id}" data-task-content="${this.escapeHtml(note.content)}" contenteditable="false"><span class="widget-content">${this.escapeHtml(note.content)}</span>${badges}<button class="widget-edit-btn" title="Bearbeiten">✎</button></span></span>`;
+
+        return widget;
     }
 
     // ============================================
