@@ -312,7 +312,10 @@ body {
 
 .task-creator-list-item-content {
     flex: 1;
-    pointer-events: none; /* Prevent double-click text selection */
+    user-select: none; /* Prevent text selection on double-click */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
 }
 
 .task-creator-list-item-actions {
@@ -2119,35 +2122,44 @@ body {
 /* Plan Task Icons (New Universal Creator) */
 .plan-task-icon {
     display: inline-block;
-    width: 18px;
-    height: 18px;
-    line-height: 18px;
-    text-align: center;
+    padding: 3px 8px;
+    min-width: 40px;
+    max-width: 300px;
+    line-height: 1.2;
+    text-align: left;
     background: #fff;
     color: #000;
-    border-radius: 3px;
+    border-radius: 4px;
     cursor: pointer;
-    font-size: 14px;
-    margin: 0 2px;
+    font-size: 12px;
+    margin: 0 4px;
     transition: all 0.2s ease;
     vertical-align: middle;
     user-select: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border: 1px solid #ddd;
 }
 
 .plan-task-icon:hover {
     background: #3498db;
     color: #fff;
-    transform: scale(1.1);
+    border-color: #3498db;
+    transform: scale(1.02);
     box-shadow: 0 2px 6px rgba(52, 152, 219, 0.4);
 }
 
 .plan-stack-icon {
     background: #9b59b6;
     color: #fff;
+    border-color: #9b59b6;
+    font-weight: 500;
 }
 
 .plan-stack-icon:hover {
     background: #8e44ad;
+    border-color: #8e44ad;
 }
 
 .welcome-message {

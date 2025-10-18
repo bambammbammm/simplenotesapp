@@ -548,10 +548,11 @@
         window.app.saveNotes();
         window.app.render();
 
-        // Update icon title if in plan mode
+        // Update icon text and title if in plan mode
         const icon = document.querySelector(`.plan-task-icon[data-note-id="${noteId}"]`);
         if (icon) {
-            icon.title = content;
+            icon.textContent = content;
+            icon.title = `Task: ${content}`;
         }
 
         console.log('Note updated:', note);
@@ -630,8 +631,9 @@
         // Update icon if in plan mode
         const icon = document.querySelector(`.plan-stack-icon[data-stack-id="${stackId}"]`);
         if (icon) {
-            icon.textContent = stack.type === 'group' ? '⊞' : '⊟';
-            icon.title = stack.title;
+            const typePrefix = stack.type === 'group' ? '[+] ' : '[→] ';
+            icon.textContent = typePrefix + stack.title;
+            icon.title = `Stack (${stack.type}): ${stack.title}`;
         }
 
         console.log('Stack updated:', stack);
@@ -643,13 +645,13 @@
 
     function insertTaskIconInPlan(note) {
         // Insert a clickable icon at cursor position
-        // Icon format: □ (white square)
+        // Icon shows task name
         const icon = document.createElement('span');
         icon.className = 'plan-task-icon';
         icon.contentEditable = 'false';
-        icon.textContent = '□';
+        icon.textContent = note.content;
         icon.dataset.noteId = note.id;
-        icon.title = note.content;
+        icon.title = `Task: ${note.content}`;
 
         // Add click handler to open modal for editing
         icon.addEventListener('click', (e) => {
@@ -694,13 +696,14 @@
 
     function insertStackIconInPlan(stack) {
         // Insert a clickable icon for stack
-        // Icon format: ⊞ (squared plus for group) or ⊟ (squared minus for sequential)
+        // Icon shows stack title with type prefix
         const icon = document.createElement('span');
         icon.className = 'plan-task-icon plan-stack-icon';
         icon.contentEditable = 'false';
-        icon.textContent = stack.type === 'group' ? '⊞' : '⊟';
+        const typePrefix = stack.type === 'group' ? '[+] ' : '[→] ';
+        icon.textContent = typePrefix + stack.title;
         icon.dataset.stackId = stack.id;
-        icon.title = stack.title;
+        icon.title = `Stack (${stack.type}): ${stack.title}`;
 
         // Add click handler to open modal for editing
         icon.addEventListener('click', (e) => {
