@@ -1654,12 +1654,11 @@ body {
     gap: 0;
     position: relative;
     padding-left: 80px; /* Space for sidebar with group name */
-    margin-bottom: 0;
-    margin-top: -8px; /* Reduce gap from parent grid (16px -> 8px effective spacing) */
+    margin-bottom: 16px; /* Consistent spacing between rows */
 }
 
-.group-row-wrapper:first-child {
-    margin-top: 0; /* No negative margin on first row */
+.group-row-wrapper:last-child {
+    margin-bottom: 0; /* No extra margin on last row */
 }
 
 .group-row-sidebar {
