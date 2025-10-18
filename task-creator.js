@@ -695,17 +695,38 @@
             // Insert at cursor position
             const range = selection.getRangeAt(0);
             range.deleteContents(); // Remove any selected text
-            range.insertNode(icon);
 
-            // Add space after icon
-            const space = document.createTextNode(' ');
-            range.insertNode(space);
+            // Check if cursor is in an empty div/block element
+            // If so, insert BEFORE the div to keep icon inline with previous content
+            const anchorNode = selection.anchorNode;
+            const parentElement = anchorNode.nodeType === Node.TEXT_NODE ? anchorNode.parentElement : anchorNode;
 
-            // Move cursor after space
-            range.setStartAfter(space);
-            range.collapse(true);
-            selection.removeAllRanges();
-            selection.addRange(range);
+            if (parentElement && parentElement.tagName === 'DIV' &&
+                (parentElement.textContent.trim() === '' || anchorNode === parentElement) &&
+                parentElement !== planEditor) {
+                // Insert before the empty div
+                parentElement.parentNode.insertBefore(icon, parentElement);
+                parentElement.parentNode.insertBefore(document.createTextNode(' '), parentElement);
+
+                // Move cursor after icon (into the div)
+                range.setStart(parentElement, 0);
+                range.collapse(true);
+                selection.removeAllRanges();
+                selection.addRange(range);
+            } else {
+                // Normal insert at cursor position
+                range.insertNode(icon);
+
+                // Add space after icon
+                const space = document.createTextNode(' ');
+                range.insertNode(space);
+
+                // Move cursor after space
+                range.setStartAfter(space);
+                range.collapse(true);
+                selection.removeAllRanges();
+                selection.addRange(range);
+            }
         } else {
             // Append to end if no valid cursor position
             planEditor.appendChild(icon);
@@ -747,17 +768,38 @@
             // Insert at cursor position
             const range = selection.getRangeAt(0);
             range.deleteContents();
-            range.insertNode(icon);
 
-            // Add space after icon
-            const space = document.createTextNode(' ');
-            range.insertNode(space);
+            // Check if cursor is in an empty div/block element
+            // If so, insert BEFORE the div to keep icon inline with previous content
+            const anchorNode = selection.anchorNode;
+            const parentElement = anchorNode.nodeType === Node.TEXT_NODE ? anchorNode.parentElement : anchorNode;
 
-            // Move cursor after space
-            range.setStartAfter(space);
-            range.collapse(true);
-            selection.removeAllRanges();
-            selection.addRange(range);
+            if (parentElement && parentElement.tagName === 'DIV' &&
+                (parentElement.textContent.trim() === '' || anchorNode === parentElement) &&
+                parentElement !== planEditor) {
+                // Insert before the empty div
+                parentElement.parentNode.insertBefore(icon, parentElement);
+                parentElement.parentNode.insertBefore(document.createTextNode(' '), parentElement);
+
+                // Move cursor after icon (into the div)
+                range.setStart(parentElement, 0);
+                range.collapse(true);
+                selection.removeAllRanges();
+                selection.addRange(range);
+            } else {
+                // Normal insert at cursor position
+                range.insertNode(icon);
+
+                // Add space after icon
+                const space = document.createTextNode(' ');
+                range.insertNode(space);
+
+                // Move cursor after space
+                range.setStartAfter(space);
+                range.collapse(true);
+                selection.removeAllRanges();
+                selection.addRange(range);
+            }
         } else {
             // Append to end if no valid cursor position
             planEditor.appendChild(icon);
