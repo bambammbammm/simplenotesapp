@@ -1865,10 +1865,15 @@ body.zen-mode .saved-notes-sidebar {
     position: fixed;
     right: 40px;
     bottom: 40px; /* Move to bottom right for better focus */
-    display: flex;
+    display: none; /* Hidden by default */
     flex-direction: column;
     gap: 12px;
     z-index: 10;
+}
+
+/* Show plan-actions only when Plan View is active (body has zen-mode class) */
+body.zen-mode .plan-actions {
+    display: flex !important;
 }
 
 .plan-action-btn {
