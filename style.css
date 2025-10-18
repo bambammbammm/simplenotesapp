@@ -455,6 +455,12 @@ body {
     font-variant-numeric: tabular-nums;
 }
 
+.header-end-time {
+    font-size: 11px;
+    color: #888;
+    margin-left: 8px;
+}
+
 .header-timer-btn {
     background: #1a1a1a;
     border: 1px solid #333;
