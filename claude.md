@@ -43,13 +43,18 @@ Minimalistische Todo-App mit Terminal-Design. Pure Vanilla JavaScript.
 - **/** (Slash): Filter Command Palette öffnen
 - **n**: Input Modal öffnen (neue Note erstellen)
 - **s**: Stack View toggle (nur in Board View)
+- **Cmd+K** (Ctrl+K): Universal Task/Stack Creator Modal öffnen
 - **Cmd+Z** (Ctrl+Z): Undo (letzte Aktion rückgängig machen)
-- **ESC**: Modals schließen (Input, Filter, Stack Modal)
+- **ESC**: Modals schließen (Input, Filter, Stack Modal, Creator Modal)
 
 ### 2. Plan View
-- Typewriter-Editor mit Live Markdown
+- **Zen Mode**: Header und Sidebar versteckt, nur Editor + Action-Buttons
+- **Typewriter Scrolling**: Aktuelle Zeile bleibt immer vertikal zentriert
+- **Editor**: 50vh Padding oben/unten, wächst mit Content
 - Auto-Task: `(Task 30m --k !!)` → Karte + grünes `[...] ✓`
 - **Stack-Blöcke**: Mehrere Tasks als Stack erstellen
+- **Universal Creator Icons**: Weiße Task-Icons, lila Stack-Icons (klickbar zum Bearbeiten)
+- **Icon Insertion**: Inline im Text, Cursor automatisch nach Icon + Space
 - **Parsing-Order**: Kategorie → Priorität → Zeit
 - Storage: `planText` als innerHTML (nicht plain text!)
 
@@ -138,6 +143,28 @@ seq: Stack Titel
 - **Trigger**: Animation startet automatisch beim Switch zu Board/Kanban View
 - **Cleanup**: Nach 1s werden IDs aus Set entfernt, Animation endet automatisch
 
+### 11. Universal Task/Stack Creator Modal (Cmd+K)
+- **Zugriff**: Cmd+K (Ctrl+K) in Board oder Plan View
+- **Features**:
+  - Erstelle Tasks oder Stacks mit vollständigem GUI
+  - Alle Felder: Content, Zeit, Kategorie, Priorität, Tag
+  - Multiple Tasks hinzufügen → Stack-Optionen erscheinen
+  - Stack-Typen: None, Group (+), Sequential (→)
+  - Reorder Tasks mit ↑↓ Buttons
+  - Einzelne Tasks entfernen mit × Button
+- **Edit Mode**: Klick auf Icon öffnet Modal zum Bearbeiten
+  - Tasks: Alle Felder editierbar
+  - Stacks: Tasks doppelklicken zum Bearbeiten, Enter zum nächsten
+  - Sequential Editing: Mehrere Tasks nacheinander bearbeiten
+  - Visuelles Feedback: Grüner Button, blaue Border bei aktiver Task
+- **Plan View Integration**:
+  - Icons werden inline im Text eingefügt
+  - Weiße Icons für Tasks, lila Icons für Stacks
+  - Zeigen Namen/Titel (nicht nur Symbole)
+  - Cursor automatisch nach Icon + Leerzeichen
+  - Empty DIV Detection: Icons vor leeren `<div>` einfügen (bleibt inline)
+  - setTimeout(10ms) für Cursor-Fokus nach Modal-Close
+
 ## Kritische Implementierungsdetails
 
 ### Parsing-Reihenfolge (addNote)
@@ -214,9 +241,10 @@ stacks = stacks.filter(s => s.noteIds.length > 0);
 ## Datei-Struktur
 
 - **index.html**: Main HTML mit Header, Modals, Views
-- **app.js**: Core App-Logik (Notes, Stacks, Timer, Filters)
+- **app.js**: Core App-Logik (Notes, Stacks, Timer, Filters, Typewriter Scrolling)
 - **ui-redesign.js**: UI-Layer (Filter Palette, Input Modal, Header Updates)
-- **style.css**: Alle Styles (Header, Modals, Cards, Animations)
+- **task-creator.js**: Universal Task/Stack Creator Modal (Cmd+K)
+- **style.css**: Alle Styles (Header, Modals, Cards, Animations, Zen Mode)
 - **sw.js**: Service Worker für PWA (Cache-Versioning)
 - **manifest.json**: PWA Manifest
 - **CLAUDE.md**: Dev Docs (dieses File)
@@ -257,3 +285,12 @@ stacks = stacks.filter(s => s.noteIds.length > 0);
   - Display-Properties beachten: `flex` vs `block` für Layout-Struktur
   - startTime als Number (timestamp), nicht Date-Object speichern
   - Session Summary Modal: 2 Trigger-Szenarien (Timer + Last Task)
+- **Plan Mode Zen & Creator (v54-v59)**:
+  - Zen Mode: body.zen-mode class für beide switchView Funktionen
+  - Typewriter Scrolling: Container scrollbar, Editor mit 50vh Padding
+  - Universal Creator: Separates Modul (task-creator.js) für saubere Trennung
+  - Icon Insertion: Empty DIV Detection + setTimeout für Cursor-Fokus
+  - Inline Icons: insertBefore() statt appendChild() bei leeren Divs
+  - Sequential Editing: State Management mit editingTaskId variable
+  - Visual Feedback: Button colors + border für aktive Edit-States
+  - Plan-Actions Visibility: display:none default, nur bei zen-mode flex
