@@ -706,10 +706,11 @@
                 parentElement !== planEditor) {
                 // Insert before the empty div
                 parentElement.parentNode.insertBefore(icon, parentElement);
-                parentElement.parentNode.insertBefore(document.createTextNode(' '), parentElement);
+                const space = document.createTextNode(' ');
+                parentElement.parentNode.insertBefore(space, parentElement);
 
-                // Move cursor after icon (into the div)
-                range.setStart(parentElement, 0);
+                // Move cursor after space
+                range.setStartAfter(space);
                 range.collapse(true);
                 selection.removeAllRanges();
                 selection.addRange(range);
@@ -779,10 +780,11 @@
                 parentElement !== planEditor) {
                 // Insert before the empty div
                 parentElement.parentNode.insertBefore(icon, parentElement);
-                parentElement.parentNode.insertBefore(document.createTextNode(' '), parentElement);
+                const space = document.createTextNode(' ');
+                parentElement.parentNode.insertBefore(space, parentElement);
 
-                // Move cursor after icon (into the div)
-                range.setStart(parentElement, 0);
+                // Move cursor after space
+                range.setStartAfter(space);
                 range.collapse(true);
                 selection.removeAllRanges();
                 selection.addRange(range);
