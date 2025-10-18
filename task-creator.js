@@ -383,6 +383,24 @@
             closeModal();
             return;
         } else if (editMode === 'stack') {
+            // If a task is being edited, save changes first
+            if (editingTaskId !== null) {
+                const content = contentInput.value.trim();
+                if (content) {
+                    // Apply changes to the task in the array
+                    const task = tasks.find(t => t.id === editingTaskId);
+                    if (task) {
+                        task.content = content;
+                        task.timeMinutes = timeInput.value ? parseInt(timeInput.value) : null;
+                        task.category = categorySelect.value || null;
+                        task.uClass = (categorySelect.value === 'u' ? classSelect.value : null);
+                        task.priority = currentPriority || null;
+                        task.assignedDay = daySelect.value || null;
+                    }
+                    editingTaskId = null;
+                }
+            }
+
             // Update existing stack
             updateStack(editId);
             closeModal();
