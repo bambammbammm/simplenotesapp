@@ -2137,37 +2137,6 @@ class NotesApp {
             html += `<div class="time-stat"><span class="time-stat-label">total:</span><span class="time-stat-value">${stats.total}m</span></div>`;
         }
 
-        // Load and display session data (only if recent - within last 24 hours)
-        const sessionDataStr = localStorage.getItem('lastSessionData');
-        if (sessionDataStr) {
-            try {
-                const sessionData = JSON.parse(sessionDataStr);
-                const differenceMinutes = sessionData.differenceMinutes;
-                const timestamp = sessionData.timestamp || 0;
-                const now = Date.now();
-                const hoursSinceSession = (now - timestamp) / (1000 * 60 * 60);
-
-                // Only show if recent (within 24 hours) and valid number
-                if (hoursSinceSession < 24 && typeof differenceMinutes === 'number' && !isNaN(differenceMinutes)) {
-                    if (differenceMinutes > 0) {
-                        // Faster than planned - green
-                        html += `<div class="time-stat session-stat faster"><span class="time-stat-label">Gespart:</span><span class="time-stat-value">+${differenceMinutes}m</span></div>`;
-                    } else if (differenceMinutes < 0) {
-                        // Slower than planned - red
-                        html += `<div class="time-stat session-stat slower"><span class="time-stat-label">Mehr:</span><span class="time-stat-value">${differenceMinutes}m</span></div>`;
-                    } else {
-                        // Exact - blue
-                        html += `<div class="time-stat session-stat exact"><span class="time-stat-label">Genau:</span><span class="time-stat-value">±0m</span></div>`;
-                    }
-                } else if (hoursSinceSession >= 24) {
-                    // Clear old session data
-                    localStorage.removeItem('lastSessionData');
-                }
-            } catch (e) {
-                console.error('Error loading session data:', e);
-            }
-        }
-
         this.timeStatsElement.innerHTML = html;
     }
 

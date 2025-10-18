@@ -497,14 +497,6 @@ body {
     background: #27ae60;
 }
 
-.header-session-stat {
-    color: #2ecc71;
-    border: 1px solid #2ecc71;
-    padding: 3px 10px;
-    border-radius: 3px;
-    font-size: 12px;
-}
-
 .filter-palette-trigger {
     background: transparent;
     border: 1px solid #555;
