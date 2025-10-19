@@ -171,6 +171,10 @@ class NotesApp {
             }
         });
 
+        // Floating Toolbar initialization
+        this.floatingToolbar = document.getElementById('floatingToolbar');
+        this.initFloatingToolbar();
+
         // Saved Notes event listeners
         this.planNewBtn = document.getElementById('planNewBtn');
         this.planSaveBtn.addEventListener('click', () => this.promptSavePlanNote());
@@ -3356,9 +3360,461 @@ class NotesApp {
         return false;
     }
 
+    handleTableCreation() {
+        const selection = window.getSelection();
+        if (selection.rangeCount === 0) return false;
+
+        const range = selection.getRangeAt(0);
+        const currentNode = range.startContainer;
+
+        // Find the div containing current line
+        let lineElement = currentNode.nodeType === Node.TEXT_NODE ? currentNode.parentElement : currentNode;
+        while (lineElement && lineElement.tagName !== 'DIV' && lineElement !== this.planEditor) {
+            lineElement = lineElement.parentElement;
+        }
+
+        if (!lineElement || lineElement.tagName !== 'DIV') return false;
+
+        // Check if current line is empty (user pressed Enter on empty line after table)
+        const lineText = lineElement.textContent.trim();
+        if (lineText !== '') return false;
+
+        console.log('Empty line detected, checking for table...');
+
+        // Look backwards to find table markdown lines
+        const tableLines = [];
+        let currentElement = lineElement.previousElementSibling;
+
+        // Collect all consecutive lines that look like table rows (start with |)
+        while (currentElement && currentElement.tagName === 'DIV') {
+            const text = currentElement.textContent.trim();
+            if (text.startsWith('|') && text.endsWith('|')) {
+                tableLines.unshift(text); // Add to beginning
+                currentElement = currentElement.previousElementSibling;
+            } else {
+                break;
+            }
+        }
+
+        console.log('Found table lines:', tableLines);
+
+        // Need at least 1 line (just the header)
+        if (tableLines.length < 1) return false;
+
+        // First line is header
+        const headers = this.parseTableRow(tableLines[0]);
+        console.log('Headers:', headers);
+
+        // Remaining lines are data rows, or create one empty row if only header exists
+        let rows;
+        if (tableLines.length > 1) {
+            rows = tableLines.slice(1).map(line => this.parseTableRow(line));
+        } else {
+            // Create one empty row with same number of columns as headers
+            rows = [headers.map(() => '')];
+        }
+        console.log('Rows:', rows);
+
+        // Create HTML table (returns wrapper with table + action buttons)
+        const tableWrapper = this.createHTMLTable(headers, rows);
+
+        // Find first table line element to replace
+        let firstTableElement = lineElement;
+        for (let i = 0; i < tableLines.length; i++) {
+            firstTableElement = firstTableElement.previousElementSibling;
+        }
+
+        // Remove all table markdown lines
+        let elementToRemove = firstTableElement;
+        for (let i = 0; i < tableLines.length; i++) {
+            const next = elementToRemove.nextElementSibling;
+            elementToRemove.remove();
+            elementToRemove = next;
+        }
+
+        // Replace empty line with table wrapper
+        lineElement.parentNode.replaceChild(tableWrapper, lineElement);
+
+        // Create new div after table for continued editing
+        const newDiv = document.createElement('div');
+        newDiv.innerHTML = '<br>';
+        tableWrapper.parentNode.insertBefore(newDiv, tableWrapper.nextSibling);
+
+        // Move cursor to new div
+        const newRange = document.createRange();
+        newRange.setStart(newDiv, 0);
+        newRange.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(newRange);
+
+        this.savePlanText();
+        return true;
+    }
+
+    parseTableRow(line) {
+        // Remove leading and trailing |
+        line = line.trim();
+        if (line.startsWith('|')) line = line.substring(1);
+        if (line.endsWith('|')) line = line.substring(0, line.length - 1);
+
+        // Split by | and trim each cell
+        return line.split('|').map(cell => cell.trim());
+    }
+
+    createHTMLTable(headers, rows) {
+        // Create wrapper div for table + actions
+        const wrapper = document.createElement('div');
+        wrapper.className = 'table-wrapper';
+
+        const table = document.createElement('table');
+        table.className = 'plan-table';
+        table.contentEditable = 'false'; // Table itself not editable, only cells
+
+        // Track last focused cell for move operations
+        table._lastFocusedCell = null;
+
+        // Create header
+        const thead = document.createElement('thead');
+        const headerRow = document.createElement('tr');
+        headers.forEach(headerText => {
+            const th = document.createElement('th');
+            th.contentEditable = 'true';
+            th.textContent = headerText;
+            // Track focus for move operations
+            th.addEventListener('focus', () => {
+                table._lastFocusedCell = th;
+            });
+            headerRow.appendChild(th);
+        });
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
+
+        // Create body
+        const tbody = document.createElement('tbody');
+        rows.forEach(rowData => {
+            const tr = document.createElement('tr');
+            rowData.forEach(cellText => {
+                const td = document.createElement('td');
+                td.contentEditable = 'true';
+                td.textContent = cellText;
+                // Track focus for move operations
+                td.addEventListener('focus', () => {
+                    table._lastFocusedCell = td;
+                });
+                tr.appendChild(td);
+            });
+            tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+
+        // Add table to wrapper
+        wrapper.appendChild(table);
+
+        // Create action buttons
+        const actions = document.createElement('div');
+        actions.className = 'table-actions';
+        actions.contentEditable = 'false';
+
+        const addRowBtn = document.createElement('button');
+        addRowBtn.className = 'table-action-btn';
+        addRowBtn.textContent = '+ Row';
+        addRowBtn.addEventListener('click', () => this.addTableRow(table));
+
+        const addColBtn = document.createElement('button');
+        addColBtn.className = 'table-action-btn';
+        addColBtn.textContent = '+ Column';
+        addColBtn.addEventListener('click', () => this.addTableColumn(table));
+
+        const moveRowUpBtn = document.createElement('button');
+        moveRowUpBtn.className = 'table-action-btn';
+        moveRowUpBtn.textContent = '↑ Zeile';
+        moveRowUpBtn.addEventListener('click', () => this.moveTableRow(table, 'up'));
+
+        const moveRowDownBtn = document.createElement('button');
+        moveRowDownBtn.className = 'table-action-btn';
+        moveRowDownBtn.textContent = 'Zeile ↓';
+        moveRowDownBtn.addEventListener('click', () => this.moveTableRow(table, 'down'));
+
+        const moveColLeftBtn = document.createElement('button');
+        moveColLeftBtn.className = 'table-action-btn';
+        moveColLeftBtn.textContent = '← Spalte';
+        moveColLeftBtn.addEventListener('click', () => this.moveTableColumn(table, 'left'));
+
+        const moveColRightBtn = document.createElement('button');
+        moveColRightBtn.className = 'table-action-btn';
+        moveColRightBtn.textContent = 'Spalte →';
+        moveColRightBtn.addEventListener('click', () => this.moveTableColumn(table, 'right'));
+
+        const deleteTableBtn = document.createElement('button');
+        deleteTableBtn.className = 'table-action-btn delete';
+        deleteTableBtn.textContent = '× Delete Table';
+        deleteTableBtn.addEventListener('click', () => this.deleteTable(wrapper));
+
+        actions.appendChild(addRowBtn);
+        actions.appendChild(addColBtn);
+        actions.appendChild(moveRowUpBtn);
+        actions.appendChild(moveRowDownBtn);
+        actions.appendChild(moveColLeftBtn);
+        actions.appendChild(moveColRightBtn);
+        actions.appendChild(deleteTableBtn);
+
+        wrapper.appendChild(actions);
+
+        return wrapper;
+    }
+
+    addTableRow(table) {
+        const tbody = table.querySelector('tbody');
+        const columnCount = table.querySelector('thead tr').children.length;
+
+        const newRow = document.createElement('tr');
+        for (let i = 0; i < columnCount; i++) {
+            const td = document.createElement('td');
+            td.contentEditable = 'true';
+            td.textContent = '';
+            // Track focus for move operations
+            td.addEventListener('focus', () => {
+                table._lastFocusedCell = td;
+            });
+            newRow.appendChild(td);
+        }
+
+        tbody.appendChild(newRow);
+        this.savePlanText();
+
+        // Focus first cell of new row
+        newRow.firstElementChild.focus();
+    }
+
+    addTableColumn(table) {
+        const thead = table.querySelector('thead');
+        const tbody = table.querySelector('tbody');
+
+        // Add header cell
+        const headerRow = thead.querySelector('tr');
+        const newTh = document.createElement('th');
+        newTh.contentEditable = 'true';
+        newTh.textContent = 'Column';
+        // Track focus for move operations
+        newTh.addEventListener('focus', () => {
+            table._lastFocusedCell = newTh;
+        });
+        headerRow.appendChild(newTh);
+
+        // Add cell to each body row
+        const bodyRows = tbody.querySelectorAll('tr');
+        bodyRows.forEach(row => {
+            const newTd = document.createElement('td');
+            newTd.contentEditable = 'true';
+            newTd.textContent = '';
+            // Track focus for move operations
+            newTd.addEventListener('focus', () => {
+                table._lastFocusedCell = newTd;
+            });
+            row.appendChild(newTd);
+        });
+
+        this.savePlanText();
+
+        // Focus new header cell
+        newTh.focus();
+    }
+
+    deleteTable(wrapper) {
+        if (confirm('Tabelle wirklich löschen?')) {
+            wrapper.remove();
+            this.savePlanText();
+        }
+    }
+
+    moveTableRow(table, direction) {
+        // Use last focused cell (stored on table element)
+        const focusedCell = table._lastFocusedCell;
+        if (!focusedCell || (focusedCell.tagName !== 'TD' && focusedCell.tagName !== 'TH')) {
+            alert('Bitte zuerst eine Zelle fokussieren');
+            return;
+        }
+
+        // Find the row containing the focused cell
+        let currentRow = focusedCell.parentElement;
+        if (!currentRow || currentRow.tagName !== 'TR') return;
+
+        // Check if we're in header (can't move header row)
+        const isHeader = focusedCell.tagName === 'TH';
+        if (isHeader) {
+            alert('Header-Zeile kann nicht verschoben werden');
+            return;
+        }
+
+        // Get sibling row
+        const targetRow = direction === 'up' ? currentRow.previousElementSibling : currentRow.nextElementSibling;
+        if (!targetRow) {
+            alert(direction === 'up' ? 'Bereits erste Zeile' : 'Bereits letzte Zeile');
+            return;
+        }
+
+        // Swap rows
+        const tbody = currentRow.parentElement;
+        if (direction === 'up') {
+            tbody.insertBefore(currentRow, targetRow);
+        } else {
+            tbody.insertBefore(targetRow, currentRow);
+        }
+
+        this.savePlanText();
+
+        // Re-focus the original cell
+        setTimeout(() => focusedCell.focus(), 10);
+    }
+
+    moveTableColumn(table, direction) {
+        // Use last focused cell (stored on table element)
+        const focusedCell = table._lastFocusedCell;
+        if (!focusedCell || (focusedCell.tagName !== 'TD' && focusedCell.tagName !== 'TH')) {
+            alert('Bitte zuerst eine Zelle fokussieren');
+            return;
+        }
+
+        // Find column index
+        const currentRow = focusedCell.parentElement;
+        const cells = Array.from(currentRow.children);
+        const columnIndex = cells.indexOf(focusedCell);
+
+        if (columnIndex === -1) return;
+
+        // Check boundaries
+        const targetIndex = direction === 'left' ? columnIndex - 1 : columnIndex + 1;
+        if (targetIndex < 0) {
+            alert('Bereits erste Spalte');
+            return;
+        }
+        if (targetIndex >= cells.length) {
+            alert('Bereits letzte Spalte');
+            return;
+        }
+
+        // Move column in header
+        const thead = table.querySelector('thead');
+        const headerRow = thead.querySelector('tr');
+        const headerCells = Array.from(headerRow.children);
+        const headerCell = headerCells[columnIndex];
+        const targetHeaderCell = headerCells[targetIndex];
+
+        if (direction === 'left') {
+            headerRow.insertBefore(headerCell, targetHeaderCell);
+        } else {
+            headerRow.insertBefore(targetHeaderCell, headerCell);
+        }
+
+        // Move column in all body rows
+        const tbody = table.querySelector('tbody');
+        const bodyRows = tbody.querySelectorAll('tr');
+        bodyRows.forEach(row => {
+            const rowCells = Array.from(row.children);
+            const cell = rowCells[columnIndex];
+            const targetCell = rowCells[targetIndex];
+
+            if (direction === 'left') {
+                row.insertBefore(cell, targetCell);
+            } else {
+                row.insertBefore(targetCell, cell);
+            }
+        });
+
+        this.savePlanText();
+
+        // Re-focus the original cell
+        setTimeout(() => focusedCell.focus(), 10);
+    }
+
+    handleTableTabNavigation(shiftKey) {
+        const selection = window.getSelection();
+        if (!selection.rangeCount) return false;
+
+        const range = selection.getRangeAt(0);
+        let currentCell = range.startContainer;
+
+        // Find the current table cell
+        while (currentCell && currentCell.tagName !== 'TD' && currentCell.tagName !== 'TH' && currentCell !== this.planEditor) {
+            currentCell = currentCell.parentElement;
+        }
+
+        if (!currentCell || (currentCell.tagName !== 'TD' && currentCell.tagName !== 'TH')) return false;
+
+        // Find the table
+        let table = currentCell;
+        while (table && table.tagName !== 'TABLE') {
+            table = table.parentElement;
+        }
+
+        if (!table) return false;
+
+        // Get all cells in the table
+        const allCells = Array.from(table.querySelectorAll('th, td'));
+        const currentIndex = allCells.indexOf(currentCell);
+
+        if (currentIndex === -1) return false;
+
+        // Determine next cell
+        let nextIndex;
+        if (shiftKey) {
+            // Shift+Tab: Go backwards
+            nextIndex = currentIndex - 1;
+            if (nextIndex < 0) {
+                // Exit table, move to element before table
+                const prevElement = table.previousElementSibling;
+                if (prevElement) {
+                    const newRange = document.createRange();
+                    newRange.selectNodeContents(prevElement);
+                    newRange.collapse(false); // Move to end
+                    selection.removeAllRanges();
+                    selection.addRange(newRange);
+                }
+                return true;
+            }
+        } else {
+            // Tab: Go forwards
+            nextIndex = currentIndex + 1;
+            if (nextIndex >= allCells.length) {
+                // Exit table, move to element after table
+                const nextElement = table.nextElementSibling;
+                if (nextElement) {
+                    const newRange = document.createRange();
+                    newRange.selectNodeContents(nextElement);
+                    newRange.collapse(true); // Move to start
+                    selection.removeAllRanges();
+                    selection.addRange(newRange);
+                }
+                return true;
+            }
+        }
+
+        // Move to next cell
+        const nextCell = allCells[nextIndex];
+        const newRange = document.createRange();
+        newRange.selectNodeContents(nextCell);
+        newRange.collapse(true); // Move to start of cell
+        selection.removeAllRanges();
+        selection.addRange(newRange);
+
+        // Focus the next cell
+        nextCell.focus();
+
+        return true;
+    }
+
     handlePlanKeyDown(e) {
         const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
         const cmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
+
+        // Tab: Navigate between table cells
+        if (e.key === 'Tab' && !cmdOrCtrl) {
+            const handled = this.handleTableTabNavigation(e.shiftKey);
+            if (handled) {
+                e.preventDefault();
+                return;
+            }
+        }
 
         // Space: Check for Markdown patterns BEFORE space is inserted
         if (e.key === ' ' && !cmdOrCtrl && !e.shiftKey) {
@@ -3382,6 +3838,13 @@ class NotesApp {
             // Check for horizontal divider first
             const dividerHandled = this.handleDividerCreation();
             if (dividerHandled) {
+                e.preventDefault();
+                return;
+            }
+
+            // Check for table creation
+            const tableHandled = this.handleTableCreation();
+            if (tableHandled) {
                 e.preventDefault();
                 return;
             }
@@ -4137,6 +4600,92 @@ class NotesApp {
         if (saved) {
             this.planEditor.innerHTML = saved;
         }
+        // Update existing tables with new buttons (for backwards compatibility)
+        this.updateExistingTables();
+    }
+
+    updateExistingTables() {
+        // Find all existing tables in plan editor
+        const tables = this.planEditor.querySelectorAll('.plan-table');
+
+        tables.forEach(table => {
+            // Initialize focus tracker if not present
+            if (!table._lastFocusedCell) {
+                table._lastFocusedCell = null;
+
+                // Add focus listeners to all cells
+                const allCells = table.querySelectorAll('th, td');
+                allCells.forEach(cell => {
+                    cell.addEventListener('focus', () => {
+                        table._lastFocusedCell = cell;
+                    });
+                });
+            }
+
+            // Find the parent wrapper
+            const wrapper = table.closest('.table-wrapper');
+            if (!wrapper) return;
+
+            // Find the actions div
+            let actions = wrapper.querySelector('.table-actions');
+            if (!actions) {
+                // Create actions div if it doesn't exist
+                actions = document.createElement('div');
+                actions.className = 'table-actions';
+                actions.contentEditable = 'false';
+                wrapper.appendChild(actions);
+            }
+
+            // Check if move buttons already exist
+            const hasMoveButtons = actions.querySelector('button[textContent*="↑"]') !== null;
+            if (hasMoveButtons) return; // Already updated
+
+            // Clear and rebuild all buttons
+            actions.innerHTML = '';
+
+            const addRowBtn = document.createElement('button');
+            addRowBtn.className = 'table-action-btn';
+            addRowBtn.textContent = '+ Row';
+            addRowBtn.addEventListener('click', () => this.addTableRow(table));
+
+            const addColBtn = document.createElement('button');
+            addColBtn.className = 'table-action-btn';
+            addColBtn.textContent = '+ Column';
+            addColBtn.addEventListener('click', () => this.addTableColumn(table));
+
+            const moveRowUpBtn = document.createElement('button');
+            moveRowUpBtn.className = 'table-action-btn';
+            moveRowUpBtn.textContent = '↑ Zeile';
+            moveRowUpBtn.addEventListener('click', () => this.moveTableRow(table, 'up'));
+
+            const moveRowDownBtn = document.createElement('button');
+            moveRowDownBtn.className = 'table-action-btn';
+            moveRowDownBtn.textContent = 'Zeile ↓';
+            moveRowDownBtn.addEventListener('click', () => this.moveTableRow(table, 'down'));
+
+            const moveColLeftBtn = document.createElement('button');
+            moveColLeftBtn.className = 'table-action-btn';
+            moveColLeftBtn.textContent = '← Spalte';
+            moveColLeftBtn.addEventListener('click', () => this.moveTableColumn(table, 'left'));
+
+            const moveColRightBtn = document.createElement('button');
+            moveColRightBtn.className = 'table-action-btn';
+            moveColRightBtn.textContent = 'Spalte →';
+            moveColRightBtn.addEventListener('click', () => this.moveTableColumn(table, 'right'));
+
+            const deleteTableBtn = document.createElement('button');
+            deleteTableBtn.className = 'table-action-btn delete';
+            deleteTableBtn.textContent = '× Delete Table';
+            deleteTableBtn.addEventListener('click', () => this.deleteTable(wrapper));
+
+            actions.appendChild(addRowBtn);
+            actions.appendChild(addColBtn);
+            actions.appendChild(moveRowUpBtn);
+            actions.appendChild(moveRowDownBtn);
+            actions.appendChild(moveColLeftBtn);
+            actions.appendChild(moveColRightBtn);
+            actions.appendChild(deleteTableBtn);
+        });
     }
 
     escapeHtml(text) {
@@ -4568,6 +5117,198 @@ class NotesApp {
                 behavior: 'smooth'
             });
         }
+    }
+
+    // ========== Floating Formatting Toolbar ==========
+
+    initFloatingToolbar() {
+        // Listen for text selection in plan editor
+        document.addEventListener('selectionchange', () => {
+            if (this.currentView !== 'plan') return;
+            this.handleTextSelection();
+        });
+
+        // Bold button
+        document.getElementById('toolbarBold').addEventListener('click', (e) => {
+            e.preventDefault();
+            document.execCommand('bold', false, null);
+            this.savePlanText();
+        });
+
+        // Italic button
+        document.getElementById('toolbarItalic').addEventListener('click', (e) => {
+            e.preventDefault();
+            document.execCommand('italic', false, null);
+            this.savePlanText();
+        });
+
+        // Highlight buttons
+        const highlightButtons = this.floatingToolbar.querySelectorAll('.toolbar-highlight');
+        highlightButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const color = btn.dataset.color;
+                this.applyHighlight(color);
+            });
+        });
+
+        // Remove formatting button
+        document.getElementById('toolbarRemove').addEventListener('click', (e) => {
+            e.preventDefault();
+            this.removeHighlight();
+        });
+    }
+
+    handleTextSelection() {
+        const selection = window.getSelection();
+
+        // Hide toolbar if no selection or selection is collapsed (cursor)
+        if (!selection || selection.isCollapsed || selection.rangeCount === 0) {
+            this.hideFloatingToolbar();
+            return;
+        }
+
+        // Check if selection is within plan editor
+        const range = selection.getRangeAt(0);
+        if (!this.planEditor.contains(range.commonAncestorContainer)) {
+            this.hideFloatingToolbar();
+            return;
+        }
+
+        // Get selected text
+        const selectedText = selection.toString().trim();
+        if (selectedText.length === 0) {
+            this.hideFloatingToolbar();
+            return;
+        }
+
+        // Show and position toolbar
+        this.showFloatingToolbar(range);
+    }
+
+    showFloatingToolbar(range) {
+        const rect = range.getBoundingClientRect();
+
+        // Position toolbar above selection
+        const toolbarHeight = 40; // Approximate height
+        const toolbarWidth = this.floatingToolbar.offsetWidth || 300; // Fallback width
+
+        // Calculate position
+        let left = rect.left + (rect.width / 2) - (toolbarWidth / 2);
+        let top = rect.top - toolbarHeight - 8; // 8px gap above selection
+
+        // Keep toolbar within viewport
+        const margin = 10;
+        if (left < margin) left = margin;
+        if (left + toolbarWidth > window.innerWidth - margin) {
+            left = window.innerWidth - toolbarWidth - margin;
+        }
+
+        // If toolbar would be above viewport, show below selection instead
+        if (top < margin) {
+            top = rect.bottom + 8;
+        }
+
+        // Apply position
+        this.floatingToolbar.style.left = `${left}px`;
+        this.floatingToolbar.style.top = `${top}px`;
+        this.floatingToolbar.classList.add('visible');
+    }
+
+    hideFloatingToolbar() {
+        this.floatingToolbar.classList.remove('visible');
+    }
+
+    applyHighlight(color) {
+        const selection = window.getSelection();
+        if (!selection.rangeCount) return;
+
+        const range = selection.getRangeAt(0);
+
+        // Map color names to CSS values
+        const colorMap = {
+            'yellow': '#FFF4CC',
+            'green': '#D4EDDA',
+            'blue': '#D1ECF1',
+            'purple': '#E7D4F5'
+        };
+
+        const bgColor = colorMap[color] || '#FFF4CC';
+
+        // Create highlight span
+        const span = document.createElement('span');
+        span.style.backgroundColor = bgColor;
+        span.style.color = '#000'; // Black text on pastel background
+        span.style.padding = '2px 0';
+        span.style.borderRadius = '2px';
+        span.className = 'text-highlight';
+        span.dataset.highlightColor = color;
+
+        // Wrap selected content
+        try {
+            range.surroundContents(span);
+        } catch (e) {
+            // If surroundContents fails (e.g., selection spans multiple elements),
+            // use a different approach
+            const fragment = range.extractContents();
+            span.appendChild(fragment);
+            range.insertNode(span);
+        }
+
+        // Insert a zero-width space after the highlight so cursor can escape
+        const escapeSpace = document.createTextNode('\u200B');
+        span.parentNode.insertBefore(escapeSpace, span.nextSibling);
+
+        // Move cursor after the highlight (to the escape space)
+        const newRange = document.createRange();
+        newRange.setStartAfter(escapeSpace);
+        newRange.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(newRange);
+
+        // Save changes
+        this.savePlanText();
+
+        // Hide toolbar
+        this.hideFloatingToolbar();
+    }
+
+    removeHighlight() {
+        const selection = window.getSelection();
+        if (!selection.rangeCount) return;
+
+        const range = selection.getRangeAt(0);
+        const commonAncestor = range.commonAncestorContainer;
+
+        // Find highlight span
+        let highlightSpan = null;
+        if (commonAncestor.nodeType === Node.ELEMENT_NODE &&
+            commonAncestor.classList &&
+            commonAncestor.classList.contains('text-highlight')) {
+            highlightSpan = commonAncestor;
+        } else if (commonAncestor.parentElement &&
+                   commonAncestor.parentElement.classList &&
+                   commonAncestor.parentElement.classList.contains('text-highlight')) {
+            highlightSpan = commonAncestor.parentElement;
+        }
+
+        if (highlightSpan) {
+            // Unwrap the highlight span
+            const parent = highlightSpan.parentNode;
+            while (highlightSpan.firstChild) {
+                parent.insertBefore(highlightSpan.firstChild, highlightSpan);
+            }
+            parent.removeChild(highlightSpan);
+
+            // Save changes
+            this.savePlanText();
+        }
+
+        // Clear selection
+        selection.removeAllRanges();
+
+        // Hide toolbar
+        this.hideFloatingToolbar();
     }
 
 }

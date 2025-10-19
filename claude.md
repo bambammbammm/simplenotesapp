@@ -164,6 +164,30 @@ seq: Stack Titel
   - Cursor automatisch nach Icon + Leerzeichen
   - Empty DIV Detection: Icons vor leeren `<div>` einfügen (bleibt inline)
   - setTimeout(10ms) für Cursor-Fokus nach Modal-Close
+  - **Tabellen-Integration**: Tasks/Stacks können in Tabellenzellen erstellt werden
+    - Saved Range: Cursor-Position wird vor Modal-Open gespeichert
+    - Icons werden korrekt in fokussierter Zelle eingefügt
+
+### 12. Plan View Tabellen
+- **Markdown-Style Syntax**: `| Header1 | Header2 |` erstellt Tabelle bei Enter
+  - Auto-Separator: Nutzer muss keine `| ---- |` Zeile eingeben
+  - Auto-Empty Row: Nur Header nötig, erste Zeile wird automatisch erstellt
+- **Full-Width Layout**: Tabellen nutzen volle Breite, Spalten verteilen sich automatisch
+- **Editable Cells**: Alle Zellen (th/td) sind contentEditable
+- **Tab Navigation**: Tab/Shift+Tab zum Navigieren zwischen Zellen
+- **Action Buttons**:
+  - **+ Row** / **+ Column**: Zeilen/Spalten hinzufügen
+  - **↑ Zeile** / **Zeile ↓**: Zeile nach oben/unten verschieben
+  - **← Spalte** / **Spalte →**: Spalte nach links/rechts verschieben
+  - **× Delete Table**: Tabelle mit Bestätigung löschen
+- **Focus Tracking**: Tabelle speichert zuletzt fokussierte Zelle in `table._lastFocusedCell`
+  - Nötig weil Button-Click den Fokus von Zelle zu Button verschiebt
+  - Alle Zellen haben `focus` Event Listener
+- **Styling**:
+  - Header: Weißer Hintergrund, schwarzer fetter Text
+  - Buttons: Weißer Text, weißer Hover-Rand (Delete-Button: rot beim Hover)
+  - Focus: Türkiser Outline für aktive Zelle
+- **Backwards Compatibility**: `updateExistingTables()` fügt neue Buttons zu alten Tabellen hinzu
 
 ## Kritische Implementierungsdetails
 
@@ -294,3 +318,13 @@ stacks = stacks.filter(s => s.noteIds.length > 0);
   - Sequential Editing: State Management mit editingTaskId variable
   - Visual Feedback: Button colors + border für aktive Edit-States
   - Plan-Actions Visibility: display:none default, nur bei zen-mode flex
+- **Plan View Tabellen (v85-v98)**:
+  - Markdown-Parsing: Nur Header + Enter = vollständige Tabelle (Auto-Separator + Auto-Row)
+  - Focus Tracking: Element-Property (`table._lastFocusedCell`) statt `document.activeElement`
+    - Button-Clicks verschieben Fokus → gespeicherte Referenz nötig
+  - Saved Range für Modal: `range.cloneRange()` vor Modal-Open speichern
+    - Modals löschen Selection → Range muss in Context gespeichert werden
+  - DOM Tree Walking: `while` Loop nach oben bis TD/TH gefunden (table cell detection)
+  - Event Listener auf Cells: Jede neue Zelle braucht Focus-Listener (addRow/addColumn)
+  - updateExistingTables(): Backwards compatibility beim Load für alte Tabellen
+  - Separate Hover-States: Header (`#f0f0f0`) vs Body (`rgba(...)`) für bessere UX

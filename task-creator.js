@@ -696,18 +696,68 @@
         const planEditor = document.getElementById('planEditor');
         if (!planEditor) return;
 
-        const selection = window.getSelection();
-        if (selection.rangeCount > 0 && planEditor.contains(selection.anchorNode)) {
-            // Insert at cursor position
-            const range = selection.getRangeAt(0);
-            range.deleteContents(); // Remove any selected text
+        // Use saved range if available (from modal open), otherwise use current selection
+        let range = null;
+        if (creatorContext && creatorContext.savedRange) {
+            range = creatorContext.savedRange;
+            console.log('Using saved range from context');
+        } else {
+            const selection = window.getSelection();
+            if (selection.rangeCount > 0 && planEditor.contains(selection.anchorNode)) {
+                range = selection.getRangeAt(0);
+                console.log('Using current selection');
+            }
+        }
 
-            // Check if cursor is in an empty div/block element
-            // If so, insert BEFORE the div to keep icon inline with previous content
-            const anchorNode = selection.anchorNode;
-            const parentElement = anchorNode.nodeType === Node.TEXT_NODE ? anchorNode.parentElement : anchorNode;
+        if (range) {
+            // Delete selected content
+            range.deleteContents();
 
-            if (parentElement && parentElement.tagName === 'DIV' &&
+            // Check if cursor is in a table cell
+            const anchorNode = range.startContainer;
+            let parentElement = anchorNode.nodeType === Node.TEXT_NODE ? anchorNode.parentElement : anchorNode;
+
+            console.log('Icon insertion - anchorNode:', anchorNode);
+            console.log('Icon insertion - parentElement:', parentElement, parentElement?.tagName);
+
+            // Check if we're inside a table cell (walk up the tree)
+            let isInTableCell = false;
+            let checkElement = parentElement;
+            while (checkElement && checkElement !== planEditor) {
+                console.log('Checking element:', checkElement.tagName);
+                if (checkElement.tagName === 'TD' || checkElement.tagName === 'TH') {
+                    isInTableCell = true;
+                    console.log('Found table cell!', checkElement);
+                    break;
+                }
+                checkElement = checkElement.parentElement;
+            }
+
+            console.log('isInTableCell:', isInTableCell);
+
+            // If in table cell, always use normal insertion
+            if (isInTableCell) {
+                // Normal insert at cursor position (works in table cells)
+                range.insertNode(icon);
+
+                // Add space after icon
+                const space = document.createTextNode(' ');
+                icon.parentNode.insertBefore(space, icon.nextSibling);
+
+                // Move cursor after space
+                const selection = window.getSelection();
+                range.setStartAfter(space);
+                range.collapse(true);
+                selection.removeAllRanges();
+                selection.addRange(range);
+
+                // Focus cell
+                setTimeout(() => {
+                    if (checkElement) {
+                        checkElement.focus();
+                    }
+                }, 10);
+            } else if (parentElement && parentElement.tagName === 'DIV' &&
                 (parentElement.textContent.trim() === '' || anchorNode === parentElement) &&
                 parentElement !== planEditor) {
                 // Insert before the empty div
@@ -719,6 +769,7 @@
                 parentElement.remove();
 
                 // Move cursor after space
+                const selection = window.getSelection();
                 range.setStartAfter(space);
                 range.collapse(true);
                 selection.removeAllRanges();
@@ -744,6 +795,7 @@
                 range.insertNode(space);
 
                 // Move cursor after space
+                const selection = window.getSelection();
                 range.setStartAfter(space);
                 range.collapse(true);
                 selection.removeAllRanges();
@@ -808,18 +860,68 @@
         const planEditor = document.getElementById('planEditor');
         if (!planEditor) return;
 
-        const selection = window.getSelection();
-        if (selection.rangeCount > 0 && planEditor.contains(selection.anchorNode)) {
-            // Insert at cursor position
-            const range = selection.getRangeAt(0);
+        // Use saved range if available (from modal open), otherwise use current selection
+        let range = null;
+        if (creatorContext && creatorContext.savedRange) {
+            range = creatorContext.savedRange;
+            console.log('Using saved range from context');
+        } else {
+            const selection = window.getSelection();
+            if (selection.rangeCount > 0 && planEditor.contains(selection.anchorNode)) {
+                range = selection.getRangeAt(0);
+                console.log('Using current selection');
+            }
+        }
+
+        if (range) {
+            // Delete selected content
             range.deleteContents();
 
-            // Check if cursor is in an empty div/block element
-            // If so, insert BEFORE the div to keep icon inline with previous content
-            const anchorNode = selection.anchorNode;
-            const parentElement = anchorNode.nodeType === Node.TEXT_NODE ? anchorNode.parentElement : anchorNode;
+            // Check if cursor is in a table cell
+            const anchorNode = range.startContainer;
+            let parentElement = anchorNode.nodeType === Node.TEXT_NODE ? anchorNode.parentElement : anchorNode;
 
-            if (parentElement && parentElement.tagName === 'DIV' &&
+            console.log('Icon insertion - anchorNode:', anchorNode);
+            console.log('Icon insertion - parentElement:', parentElement, parentElement?.tagName);
+
+            // Check if we're inside a table cell (walk up the tree)
+            let isInTableCell = false;
+            let checkElement = parentElement;
+            while (checkElement && checkElement !== planEditor) {
+                console.log('Checking element:', checkElement.tagName);
+                if (checkElement.tagName === 'TD' || checkElement.tagName === 'TH') {
+                    isInTableCell = true;
+                    console.log('Found table cell!', checkElement);
+                    break;
+                }
+                checkElement = checkElement.parentElement;
+            }
+
+            console.log('isInTableCell:', isInTableCell);
+
+            // If in table cell, always use normal insertion
+            if (isInTableCell) {
+                // Normal insert at cursor position (works in table cells)
+                range.insertNode(icon);
+
+                // Add space after icon
+                const space = document.createTextNode(' ');
+                icon.parentNode.insertBefore(space, icon.nextSibling);
+
+                // Move cursor after space
+                const selection = window.getSelection();
+                range.setStartAfter(space);
+                range.collapse(true);
+                selection.removeAllRanges();
+                selection.addRange(range);
+
+                // Focus cell
+                setTimeout(() => {
+                    if (checkElement) {
+                        checkElement.focus();
+                    }
+                }, 10);
+            } else if (parentElement && parentElement.tagName === 'DIV' &&
                 (parentElement.textContent.trim() === '' || anchorNode === parentElement) &&
                 parentElement !== planEditor) {
                 // Insert before the empty div
@@ -831,6 +933,7 @@
                 parentElement.remove();
 
                 // Move cursor after space
+                const selection = window.getSelection();
                 range.setStartAfter(space);
                 range.collapse(true);
                 selection.removeAllRanges();
@@ -855,6 +958,7 @@
                 range.insertNode(space);
 
                 // Move cursor after space
+                const selection = window.getSelection();
                 range.setStartAfter(space);
                 range.collapse(true);
                 selection.removeAllRanges();
@@ -1037,7 +1141,16 @@
 
             // Determine context
             const inPlanView = window.app.planView.style.display !== 'none';
-            const context = inPlanView ? { mode: 'plan' } : { mode: 'board' };
+            let context = { mode: inPlanView ? 'plan' : 'board' };
+
+            // Save current selection/range if in plan view
+            if (inPlanView) {
+                const selection = window.getSelection();
+                if (selection.rangeCount > 0) {
+                    context.savedRange = selection.getRangeAt(0).cloneRange();
+                    console.log('Saved range:', context.savedRange);
+                }
+            }
 
             openModal(context);
         }

@@ -1913,6 +1913,116 @@ body.zen-mode .plan-actions {
     border-color: #2ecc71;
 }
 
+/* Floating Formatting Toolbar */
+.floating-toolbar {
+    position: absolute;
+    background: rgba(26, 26, 26, 0.98);
+    backdrop-filter: blur(10px);
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 6px 8px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    pointer-events: none;
+}
+
+.floating-toolbar.visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: all;
+}
+
+.toolbar-btn {
+    background: transparent;
+    border: 1px solid #333;
+    color: #e0e0e0;
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-family: 'Courier New', monospace;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 28px;
+}
+
+.toolbar-btn:hover {
+    background: rgba(127, 219, 218, 0.1);
+    border-color: #7FDBDA;
+    transform: translateY(-1px);
+}
+
+.toolbar-btn:active {
+    transform: translateY(0);
+}
+
+.toolbar-bold strong,
+.toolbar-italic em {
+    font-style: normal;
+    font-weight: normal;
+}
+
+.toolbar-bold {
+    font-weight: bold;
+}
+
+.toolbar-italic em {
+    font-style: italic;
+}
+
+/* Highlight color buttons */
+.toolbar-highlight {
+    padding: 0;
+    min-width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid #333;
+    position: relative;
+}
+
+.toolbar-highlight:hover {
+    border-color: #fff;
+    transform: scale(1.1);
+}
+
+.toolbar-highlight::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: inherit;
+    opacity: 1;
+}
+
+/* Divider */
+.toolbar-divider {
+    width: 1px;
+    height: 20px;
+    background: #444;
+    margin: 0 4px;
+}
+
+/* Remove button */
+.toolbar-remove {
+    color: #e74c3c;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.toolbar-remove:hover {
+    background: rgba(231, 76, 60, 0.1);
+    border-color: #e74c3c;
+}
+
 .plan-editor {
     width: 80%;
     max-width: 900px;
@@ -2019,6 +2129,102 @@ body.zen-mode .plan-actions {
     height: 2px;
     background: linear-gradient(to right, transparent, #444, transparent);
     margin: 24px 0;
+}
+
+/* Tables */
+.plan-table {
+    border-collapse: collapse;
+    margin: 16px 0;
+    width: 100%; /* Full width of editor */
+    table-layout: auto; /* Auto-distribute columns based on content */
+    background: rgba(26, 26, 26, 0.4);
+    border: 1px solid #333;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.plan-table thead {
+    background: #ffffff;
+}
+
+.plan-table th,
+.plan-table td {
+    border: 1px solid #333;
+    padding: 10px 14px;
+    text-align: left;
+    color: #e0e0e0;
+    font-size: 14px;
+    line-height: 1.6;
+    width: auto; /* Auto-width based on content */
+}
+
+.plan-table th {
+    font-weight: 700;
+    color: #000000;
+    background: #ffffff;
+}
+
+.plan-table td {
+    background: transparent;
+}
+
+.plan-table tr:hover td {
+    background: rgba(127, 219, 218, 0.03);
+}
+
+.plan-table th:focus {
+    outline: 2px solid #7FDBDA;
+    outline-offset: -2px;
+    background: #f0f0f0;
+}
+
+.plan-table td:focus {
+    outline: 2px solid #7FDBDA;
+    outline-offset: -2px;
+    background: rgba(127, 219, 218, 0.08);
+}
+
+/* Task icons inside table cells */
+.plan-table .plan-task-icon {
+    font-size: 12px;
+    padding: 4px 8px;
+    margin: 2px;
+}
+
+/* Table action buttons */
+.table-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    margin-bottom: 16px;
+}
+
+.table-action-btn {
+    background: rgba(26, 26, 26, 0.8);
+    border: 1px solid #333;
+    color: #ffffff;
+    padding: 6px 12px;
+    font-size: 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'Courier New', monospace;
+    transition: all 0.2s ease;
+}
+
+.table-action-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: #ffffff;
+    transform: translateY(-1px);
+}
+
+.table-action-btn.delete {
+    color: #ffffff;
+}
+
+.table-action-btn.delete:hover {
+    background: rgba(231, 76, 60, 0.1);
+    border-color: #e74c3c;
+    color: #e74c3c;
 }
 
 .plan-editor .task-checkbox {

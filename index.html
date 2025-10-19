@@ -8,8 +8,8 @@
     <title>Simple Notes App</title>
     <link rel="icon" type="image/png" href="icon-192.png">
     <link rel="apple-touch-icon" href="icon-192.png">
-    <link rel="manifest" href="manifest.json?v=80">
-    <link rel="stylesheet" href="style.css?v=80">
+    <link rel="manifest" href="manifest.json?v=98">
+    <link rel="stylesheet" href="style.css?v=98">
 </head>
 <body>
     <div class="app-container">
@@ -292,6 +292,23 @@ Tipp: Schreiben Sie (Task-Name 30m --k) um automatisch eine Aufgabe zu erstellen
                         </button>
                     </div>
                 </div>
+
+                <!-- Floating Formatting Toolbar -->
+                <div class="floating-toolbar" id="floatingToolbar">
+                    <button class="toolbar-btn toolbar-bold" id="toolbarBold" title="Fett (Cmd+B)">
+                        <strong>B</strong>
+                    </button>
+                    <button class="toolbar-btn toolbar-italic" id="toolbarItalic" title="Kursiv (Cmd+I)">
+                        <em>I</em>
+                    </button>
+                    <div class="toolbar-divider"></div>
+                    <button class="toolbar-btn toolbar-highlight" data-color="yellow" title="Gelb markieren" style="background: #FFF4CC;"></button>
+                    <button class="toolbar-btn toolbar-highlight" data-color="green" title="Grün markieren" style="background: #D4EDDA;"></button>
+                    <button class="toolbar-btn toolbar-highlight" data-color="blue" title="Blau markieren" style="background: #D1ECF1;"></button>
+                    <button class="toolbar-btn toolbar-highlight" data-color="purple" title="Lila markieren" style="background: #E7D4F5;"></button>
+                    <div class="toolbar-divider"></div>
+                    <button class="toolbar-btn toolbar-remove" id="toolbarRemove" title="Formatierung entfernen">×</button>
+                </div>
             </div>
         </main>
 
@@ -470,9 +487,9 @@ Tipp: Schreiben Sie (Task-Name 30m --k) um automatisch eine Aufgabe zu erstellen
         </div>
     </div>
 
-    <script src="app.js?v=80"></script>
-    <script src="ui-redesign.js?v=80"></script>
-    <script src="task-creator.js?v=80"></script>
+    <script src="app.js?v=98"></script>
+    <script src="ui-redesign.js?v=98"></script>
+    <script src="task-creator.js?v=98"></script>
     <script>
         // Register Service Worker for PWA
         if ('serviceWorker' in navigator) {
