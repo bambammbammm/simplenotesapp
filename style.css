@@ -1961,8 +1961,64 @@ body.zen-mode .plan-actions {
     list-style-type: disc;
 }
 
+.plan-editor ol {
+    margin: 0;
+    padding-left: 20px;
+    list-style-type: decimal;
+}
+
 .plan-editor li {
     margin: 4px 0;
+}
+
+/* Heading Styles - Beautiful Typography */
+.plan-editor h1 {
+    font-size: 36px;
+    font-weight: 700;
+    color: #fff;
+    margin: 0;
+    padding: 0;
+    line-height: 1.3;
+    letter-spacing: -0.5px;
+}
+
+.plan-editor h2 {
+    font-size: 28px;
+    font-weight: 600;
+    color: #f0f0f0;
+    margin: 0;
+    padding: 0;
+    line-height: 1.4;
+    letter-spacing: -0.3px;
+}
+
+.plan-editor h3 {
+    font-size: 22px;
+    font-weight: 600;
+    color: #e0e0e0;
+    margin: 0;
+    padding: 0;
+    line-height: 1.4;
+    letter-spacing: -0.2px;
+}
+
+/* Blockquote Styling */
+.plan-editor blockquote {
+    margin: 0;
+    padding: 12px 16px;
+    border-left: 4px solid #4a9eff;
+    background: rgba(74, 158, 255, 0.08);
+    color: #d0d0d0;
+    font-style: italic;
+    border-radius: 4px;
+}
+
+/* Horizontal Divider */
+.plan-editor hr {
+    border: none;
+    height: 2px;
+    background: linear-gradient(to right, transparent, #444, transparent);
+    margin: 24px 0;
 }
 
 .plan-editor .task-checkbox {

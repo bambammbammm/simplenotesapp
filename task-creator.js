@@ -715,6 +715,9 @@
                 const space = document.createTextNode(' ');
                 parentElement.parentNode.insertBefore(space, parentElement);
 
+                // Remove the empty div to keep everything inline
+                parentElement.remove();
+
                 // Move cursor after space
                 range.setStartAfter(space);
                 range.collapse(true);
@@ -823,6 +826,9 @@
                 parentElement.parentNode.insertBefore(icon, parentElement);
                 const space = document.createTextNode(' ');
                 parentElement.parentNode.insertBefore(space, parentElement);
+
+                // Remove the empty div to keep everything inline
+                parentElement.remove();
 
                 // Move cursor after space
                 range.setStartAfter(space);

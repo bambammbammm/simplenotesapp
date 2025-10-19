@@ -3050,74 +3050,343 @@ class NotesApp {
 
     // ========== Plan View ==========
 
+    handleMarkdownAutoFormat() {
+        const selection = window.getSelection();
+        if (selection.rangeCount === 0) return false;
+
+        const range = selection.getRangeAt(0);
+        const currentNode = range.startContainer;
+
+        // Find the block element containing cursor (could be DIV, P, or other block elements)
+        let element = currentNode.nodeType === Node.TEXT_NODE ? currentNode.parentElement : currentNode;
+
+        // Special case: if we're directly in planEditor (first line, no DIV yet)
+        if (element === this.planEditor) {
+            // Get the text content from the text node
+            const text = currentNode.textContent ? currentNode.textContent.trim() : '';
+
+            // Check if text matches a pattern BEFORE clearing
+            // Directly create the final element based on pattern
+            if (text === '#') {
+                // Clear the editor first (removes the # character)
+                this.planEditor.innerHTML = '';
+
+                const h1 = document.createElement('h1');
+                h1.innerHTML = '<br>';
+                this.planEditor.appendChild(h1);
+
+                const selection = window.getSelection();
+                const range = document.createRange();
+                range.setStart(h1, 0);
+                range.setEnd(h1, 0);
+                selection.removeAllRanges();
+                selection.addRange(range);
+
+                this.savePlanText();
+                return true;
+            } else if (text === '##') {
+                // Clear the editor first
+                this.planEditor.innerHTML = '';
+
+                const h2 = document.createElement('h2');
+                h2.innerHTML = '<br>';
+                this.planEditor.appendChild(h2);
+
+                const selection = window.getSelection();
+                const range = document.createRange();
+                range.setStart(h2, 0);
+                range.setEnd(h2, 0);
+                selection.removeAllRanges();
+                selection.addRange(range);
+
+                this.savePlanText();
+                return true;
+            } else if (text === '###') {
+                // Clear the editor first
+                this.planEditor.innerHTML = '';
+
+                const h3 = document.createElement('h3');
+                h3.innerHTML = '<br>';
+                this.planEditor.appendChild(h3);
+
+                const selection = window.getSelection();
+                const range = document.createRange();
+                range.setStart(h3, 0);
+                range.setEnd(h3, 0);
+                selection.removeAllRanges();
+                selection.addRange(range);
+
+                this.savePlanText();
+                return true;
+            } else if (text === '>') {
+                // Clear the editor first
+                this.planEditor.innerHTML = '';
+
+                const blockquote = document.createElement('blockquote');
+                blockquote.innerHTML = '<br>';
+                this.planEditor.appendChild(blockquote);
+
+                const selection = window.getSelection();
+                const range = document.createRange();
+                range.setStart(blockquote, 0);
+                range.setEnd(blockquote, 0);
+                selection.removeAllRanges();
+                selection.addRange(range);
+
+                this.savePlanText();
+                return true;
+            } else if (/^\d+\.$/.test(text)) {
+                // Clear the editor first
+                this.planEditor.innerHTML = '';
+
+                const ol = document.createElement('ol');
+                const li = document.createElement('li');
+                li.innerHTML = '<br>';
+                ol.appendChild(li);
+                this.planEditor.appendChild(ol);
+
+                const selection = window.getSelection();
+                const range = document.createRange();
+                range.setStart(li, 0);
+                range.setEnd(li, 0);
+                selection.removeAllRanges();
+                selection.addRange(range);
+
+                this.savePlanText();
+                return true;
+            }
+
+            // No match - don't clear anything, just return false
+            return false;
+        }
+
+        // Walk up the DOM tree to find a block-level element
+        while (element && element !== this.planEditor) {
+            const tag = element.tagName;
+            if (tag === 'DIV' || tag === 'P' || tag === 'H1' || tag === 'H2' || tag === 'H3' || tag === 'BLOCKQUOTE') {
+                break;
+            }
+            element = element.parentElement;
+        }
+
+        if (!element || element === this.planEditor) return false;
+
+        // Only convert if we're in a DIV (not already in a heading or blockquote)
+        if (element.tagName !== 'DIV') return false;
+
+        // Get text BEFORE space will be inserted (trim to handle any extra spaces)
+        const text = element.textContent.trim();
+
+        // Check for heading patterns
+        if (text === '#') {
+            this.convertToHeading(element, 'h1');
+            return true;
+        } else if (text === '##') {
+            this.convertToHeading(element, 'h2');
+            return true;
+        } else if (text === '###') {
+            this.convertToHeading(element, 'h3');
+            return true;
+        }
+
+        // Check for blockquote
+        if (text === '>') {
+            this.convertToBlockquote(element);
+            return true;
+        }
+
+        // Check for numbered list (1., 2., etc.)
+        if (/^\d+\.$/.test(text)) {
+            this.convertToNumberedList(element);
+            return true;
+        }
+
+        return false;
+    }
+
+    handleBlockExit() {
+        const selection = window.getSelection();
+        if (selection.rangeCount === 0) return false;
+
+        const range = selection.getRangeAt(0);
+        const currentNode = range.startContainer;
+
+        // Find the block element
+        let element = currentNode.nodeType === Node.TEXT_NODE ? currentNode.parentElement : currentNode;
+        while (element && element !== this.planEditor) {
+            const tag = element.tagName;
+
+            // Check if we're in a blockquote or heading
+            if (tag === 'BLOCKQUOTE' || tag === 'H1' || tag === 'H2' || tag === 'H3') {
+                // Check if element is empty or only has whitespace
+                const text = element.textContent.trim();
+
+                if (text === '' || text === '\u200B') {
+                    // Create new div after this element
+                    const newDiv = document.createElement('div');
+                    newDiv.innerHTML = '<br>';
+                    element.parentNode.insertBefore(newDiv, element.nextSibling);
+
+                    // Remove the empty blockquote/heading
+                    element.remove();
+
+                    // Move cursor to new div
+                    const newRange = document.createRange();
+                    newRange.setStart(newDiv, 0);
+                    newRange.collapse(true);
+                    selection.removeAllRanges();
+                    selection.addRange(newRange);
+
+                    this.savePlanText();
+                    return true;
+                }
+            }
+            element = element.parentElement;
+        }
+
+        return false;
+    }
+
+    convertToHeading(lineElement, level) {
+        // Create heading element
+        const heading = document.createElement(level);
+
+        // Add a BR element to make it editable and not collapse
+        heading.innerHTML = '<br>';
+
+        // Replace the div with heading
+        lineElement.parentNode.replaceChild(heading, lineElement);
+
+        // Place cursor in the heading
+        const selection = window.getSelection();
+        const range = document.createRange();
+        range.setStart(heading, 0);
+        range.setEnd(heading, 0);
+        selection.removeAllRanges();
+        selection.addRange(range);
+
+        this.savePlanText();
+    }
+
+    convertToBlockquote(lineElement) {
+        // Create blockquote element
+        const blockquote = document.createElement('blockquote');
+
+        // Add a BR element to make it editable and not collapse
+        blockquote.innerHTML = '<br>';
+
+        // Replace the div with blockquote
+        lineElement.parentNode.replaceChild(blockquote, lineElement);
+
+        // Place cursor in the blockquote
+        const selection = window.getSelection();
+        const range = document.createRange();
+        range.setStart(blockquote, 0);
+        range.setEnd(blockquote, 0);
+        selection.removeAllRanges();
+        selection.addRange(range);
+
+        this.savePlanText();
+    }
+
+    convertToNumberedList(lineElement) {
+        // Create ordered list structure manually
+        const ol = document.createElement('ol');
+        const li = document.createElement('li');
+        li.innerHTML = '<br>'; // BR element instead of space
+        ol.appendChild(li);
+
+        // Replace the div with ol
+        lineElement.parentNode.replaceChild(ol, lineElement);
+
+        // Place cursor in the li
+        const selection = window.getSelection();
+        const range = document.createRange();
+        range.setStart(li, 0);
+        range.setEnd(li, 0);
+        selection.removeAllRanges();
+        selection.addRange(range);
+
+        this.savePlanText();
+    }
+
+    handleDividerCreation() {
+        const selection = window.getSelection();
+        if (selection.rangeCount === 0) return false;
+
+        const range = selection.getRangeAt(0);
+        const currentNode = range.startContainer;
+
+        // Find the div containing current line
+        let lineElement = currentNode.nodeType === Node.TEXT_NODE ? currentNode.parentElement : currentNode;
+        while (lineElement && lineElement.tagName !== 'DIV' && lineElement !== this.planEditor) {
+            lineElement = lineElement.parentElement;
+        }
+
+        if (!lineElement || lineElement.tagName !== 'DIV') return false;
+
+        const lineText = lineElement.textContent.trim();
+
+        // Check for divider pattern (---)
+        if (lineText === '---' || lineText === '—') {
+            // Create hr element
+            const hr = document.createElement('hr');
+
+            // Create new empty div for next line
+            const newDiv = document.createElement('div');
+            newDiv.innerHTML = '<br>';
+
+            // Replace current line with hr
+            lineElement.parentNode.replaceChild(hr, lineElement);
+
+            // Insert new div after hr
+            hr.parentNode.insertBefore(newDiv, hr.nextSibling);
+
+            // Move cursor to new line
+            const newRange = document.createRange();
+            newRange.setStart(newDiv, 0);
+            newRange.collapse(true);
+            selection.removeAllRanges();
+            selection.addRange(newRange);
+
+            this.savePlanText();
+            return true;
+        }
+
+        return false;
+    }
+
     handlePlanKeyDown(e) {
         const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
         const cmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
 
-        // Enter: Check if we have > task syntax in current line
-        if (e.key === 'Enter' && !cmdOrCtrl && !e.shiftKey) {
-            const selection = window.getSelection();
-            if (selection.rangeCount > 0) {
-                const range = selection.getRangeAt(0);
-                const currentNode = range.startContainer;
-
-                // Find the div containing current line
-                let lineElement = currentNode.nodeType === Node.TEXT_NODE ? currentNode.parentElement : currentNode;
-                while (lineElement && lineElement.tagName !== 'DIV' && lineElement !== this.planEditor) {
-                    lineElement = lineElement.parentElement;
-                }
-
-                if (lineElement && lineElement.tagName === 'DIV') {
-                    const lineText = lineElement.textContent;
-
-                    // Check if line contains > anywhere (not just at start)
-                    const taskPattern = />([^<>\n]+)/g;
-                    const matches = [...lineText.matchAll(taskPattern)];
-
-                    if (matches.length > 0) {
-                        e.preventDefault();
-
-                        // Process all > task patterns in the line
-                        matches.forEach(match => {
-                            const fullMatch = match[0]; // "> content"
-                            const taskContent = match[1].trim(); // "content"
-
-                            if (taskContent) {
-                                // Create widget for this task
-                                const note = this.parseAndCreateNote(taskContent);
-
-                                if (note) {
-                                    // Replace "> content" with widget in HTML
-                                    const widget = this.createPlanTaskWidget(note);
-                                    const currentHTML = lineElement.innerHTML;
-
-                                    // Escape special regex chars in the match
-                                    const escapedMatch = fullMatch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                                    const newHTML = currentHTML.replace(new RegExp(escapedMatch), widget);
-
-                                    lineElement.innerHTML = newHTML;
-                                }
-                            }
-                        });
-
-                        // Add new line after processing
-                        const newDiv = document.createElement('div');
-                        newDiv.innerHTML = '<br>';
-                        lineElement.parentNode.insertBefore(newDiv, lineElement.nextSibling);
-
-                        // Move cursor to new line
-                        const newRange = document.createRange();
-                        newRange.setStart(newDiv, 0);
-                        newRange.collapse(true);
-                        selection.removeAllRanges();
-                        selection.addRange(newRange);
-
-                        this.savePlanText();
-
-                        return;
-                    }
-                }
+        // Space: Check for Markdown patterns BEFORE space is inserted
+        if (e.key === ' ' && !cmdOrCtrl && !e.shiftKey) {
+            const handled = this.handleMarkdownAutoFormat();
+            if (handled) {
+                e.preventDefault();
+                return;
             }
+        }
+
+        // Enter: Check for empty blockquote/heading exit OR divider (---) or > task syntax
+        if (e.key === 'Enter' && !cmdOrCtrl && !e.shiftKey) {
+            // First check if we're in an empty blockquote or heading - if so, exit it
+            const exitHandled = this.handleBlockExit();
+            if (exitHandled) {
+                e.preventDefault();
+                return;
+            }
+
+            // Then check for divider (---)
+            // Check for horizontal divider first
+            const dividerHandled = this.handleDividerCreation();
+            if (dividerHandled) {
+                e.preventDefault();
+                return;
+            }
+
+            // OLD > task syntax removed - now using > for blockquotes
         }
 
         // Bold: Cmd/Ctrl + B
@@ -3138,6 +3407,13 @@ class NotesApp {
         if (cmdOrCtrl && e.shiftKey && e.key === '8') {
             e.preventDefault();
             document.execCommand('insertUnorderedList', false, null);
+            return;
+        }
+
+        // Numbered list: Cmd/Ctrl + Shift + 7
+        if (cmdOrCtrl && e.shiftKey && e.key === '7') {
+            e.preventDefault();
+            document.execCommand('insertOrderedList', false, null);
             return;
         }
 
