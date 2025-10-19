@@ -7,8 +7,9 @@
     <meta name="theme-color" content="#0f0f0f">
     <title>Simple Notes App</title>
     <link rel="icon" type="image/png" href="icon-192.png">
-    <link rel="manifest" href="manifest.json?v=59">
-    <link rel="stylesheet" href="style.css?v=59">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="manifest" href="manifest.json?v=66">
+    <link rel="stylesheet" href="style.css?v=66">
 </head>
 <body>
     <div class="app-container">
@@ -239,18 +240,23 @@
 
         <!-- Plan View -->
         <main class="plan-view" id="planView" style="display: none;">
+            <!-- Sidebar Overlay -->
+            <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+            <!-- Sidebar Toggle Button (Bottom Left) -->
+            <button class="sidebar-toggle-btn" id="sidebarToggleBtn" title="Gespeicherte Notizen">
+                <span class="sidebar-toggle-icon">></span>
+            </button>
+
             <!-- Saved Notes Sidebar -->
-            <aside class="saved-notes-sidebar" id="savedNotesSidebar" style="display: none;">
+            <aside class="saved-notes-sidebar" id="savedNotesSidebar">
                 <div class="saved-notes-header">
                     <div class="saved-notes-header-top">
                         <h3>Gespeicherte Notizen</h3>
                         <div class="saved-notes-actions">
-                            <span class="saved-notes-count" id="savedNotesCount">0/5</span>
+                            <span class="saved-notes-count" id="savedNotesCount">0</span>
                         </div>
                     </div>
-                    <button class="saved-notes-collapse-btn" id="collapseSavedNotesBtn" title="Sidebar zuklappen">
-                        <span class="collapse-icon">‹</span>
-                    </button>
                 </div>
                 <div class="saved-notes-list" id="savedNotesList">
                     <!-- Saved notes will be inserted here -->
@@ -413,6 +419,12 @@ Tipp: Schreiben Sie (Task-Name 30m --k) um automatisch eine Aufgabe zu erstellen
                         <label>Stack-Titel</label>
                         <input type="text" id="taskCreatorStackTitle" class="task-creator-input" placeholder="Stack-Name">
                     </div>
+
+                    <!-- Focus All Button (nur im Edit-Modus für Stacks) -->
+                    <button class="stack-focus-all-btn" id="stackFocusAllBtn" style="display: none;" title="Alle Tasks für Work Session aktivieren">
+                        <span class="focus-all-icon">⚡</span>
+                        <span class="focus-all-label">Alle fokussieren</span>
+                    </button>
                 </div>
             </div>
 
@@ -458,38 +470,9 @@ Tipp: Schreiben Sie (Task-Name 30m --k) um automatisch eine Aufgabe zu erstellen
         </div>
     </div>
 
-    <!-- Stack Modal -->
-    <div class="stack-modal" id="stackModal" style="display: none;">
-        <div class="stack-modal-overlay"></div>
-        <div class="stack-modal-content">
-            <div class="stack-modal-header">
-                <div class="stack-modal-title-section">
-                    <h3>Stack bearbeiten</h3>
-                    <input
-                        type="text"
-                        id="stackTitleInput"
-                        class="stack-title-input"
-                        placeholder="Stack-Titel (optional)..."
-                    />
-                    <div class="stack-type-toggle">
-                        <button class="stack-type-btn" id="stackTypeBtn" data-type="group">
-                            <span class="stack-type-icon">+</span>
-                            <span class="stack-type-label">Gruppe</span>
-                        </button>
-                        <span class="stack-type-hint">Klick zum Wechseln: Gruppe ↔ Sequenz</span>
-                    </div>
-                </div>
-                <button class="stack-modal-close" id="stackModalClose">&times;</button>
-            </div>
-            <div class="stack-modal-body" id="stackModalBody">
-                <!-- Cards will be inserted here -->
-            </div>
-        </div>
-    </div>
-
-    <script src="app.js?v=59"></script>
-    <script src="ui-redesign.js?v=59"></script>
-    <script src="task-creator.js?v=59"></script>
+    <script src="app.js?v=66"></script>
+    <script src="ui-redesign.js?v=66"></script>
+    <script src="task-creator.js?v=66"></script>
     <script>
         // Register Service Worker for PWA
         if ('serviceWorker' in navigator) {

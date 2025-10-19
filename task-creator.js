@@ -89,6 +89,12 @@
         delete modal.dataset.editId;
         submitBtn.textContent = 'Erstellen';
 
+        // Hide "Alle fokussieren" button
+        const focusAllBtn = document.getElementById('stackFocusAllBtn');
+        if (focusAllBtn) {
+            focusAllBtn.style.display = 'none';
+        }
+
         // Clear task editing state
         editingTaskId = null;
     }
@@ -982,6 +988,26 @@
 
             // Change button text
             submitBtn.textContent = 'Speichern';
+
+            // Show "Alle fokussieren" button in edit mode
+            const focusAllBtn = document.getElementById('stackFocusAllBtn');
+            if (focusAllBtn) {
+                focusAllBtn.style.display = 'flex';
+
+                // Remove old event listener if exists
+                if (focusAllBtn._clickHandler) {
+                    focusAllBtn.removeEventListener('click', focusAllBtn._clickHandler);
+                }
+
+                // Add new event listener
+                const clickHandler = () => {
+                    if (window.app && window.app.focusAllStackTasks) {
+                        window.app.focusAllStackTasks(id);
+                    }
+                };
+                focusAllBtn.addEventListener('click', clickHandler);
+                focusAllBtn._clickHandler = clickHandler;
+            }
 
             // Focus content input for adding more tasks
             contentInput.focus();

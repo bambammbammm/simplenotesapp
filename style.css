@@ -1399,6 +1399,42 @@ body {
     text-align: center;
 }
 
+/* Sidebar Toggle Button (Plan View - Bottom Left) */
+.sidebar-toggle-btn {
+    position: fixed;
+    bottom: 24px;
+    left: 24px;
+    background-color: #2a2a2a;
+    border: 1px solid #444;
+    border-radius: 8px;
+    color: #e0e0e0;
+    font-size: 18px;
+    font-family: inherit;
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    z-index: 201;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.sidebar-toggle-btn:hover {
+    background-color: #333;
+    border-color: #555;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.7);
+}
+
+.sidebar-toggle-btn:active {
+    transform: scale(0.95);
+}
+
+.sidebar-toggle-icon {
+    display: block;
+}
+
 /* Backup Controls */
 .backup-controls {
     display: flex;
@@ -1664,39 +1700,41 @@ body.zen-mode .app-header {
     display: none !important;
 }
 
-body.zen-mode .saved-notes-sidebar {
-    display: none !important;
-}
-
 /* Saved Notes Sidebar */
 .saved-notes-sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
     width: 280px;
-    min-width: 280px;
     background-color: #1a1a1a;
     border-right: 1px dashed #333;
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    z-index: 200;
 }
 
-.saved-notes-sidebar.collapsed {
-    min-width: 60px;
-    width: 60px;
+.saved-notes-sidebar.visible {
+    transform: translateX(0);
 }
 
-.saved-notes-sidebar.collapsed .saved-notes-header h3 {
-    writing-mode: vertical-rl;
-    transform: rotate(180deg);
-    white-space: nowrap;
-    margin: 8px 0;
-}
-
-.saved-notes-sidebar.collapsed .saved-notes-count {
+/* Overlay when sidebar is open */
+.sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 199;
     display: none;
 }
 
-.saved-notes-sidebar.collapsed .saved-notes-list {
-    display: none;
+.sidebar-overlay.visible {
+    display: block;
 }
 
 .saved-notes-header {
@@ -1738,39 +1776,6 @@ body.zen-mode .saved-notes-sidebar {
     padding: 2px 8px;
     background-color: #252525;
     border-radius: 3px;
-}
-
-.saved-notes-collapse-btn {
-    background: transparent;
-    border: 1px solid #333;
-    color: #888;
-    cursor: pointer;
-    padding: 0;
-    width: 32px;
-    height: 18px;
-    border-radius: 3px;
-    font-size: 14px;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 8px auto 0 auto; /* Centered horizontally with top margin */
-}
-
-.saved-notes-collapse-btn:hover {
-    background-color: #2a2a2a;
-    color: #e0e0e0;
-    border-color: #666;
-}
-
-.saved-notes-collapse-btn .collapse-icon {
-    display: inline-block;
-    transition: transform 0.2s;
-    transform: rotate(-90deg); /* Point downward by default */
-}
-
-.saved-notes-sidebar.collapsed .collapse-icon {
-    transform: rotate(180deg); /* Point upward when collapsed */
 }
 
 .saved-notes-list {
@@ -2440,10 +2445,31 @@ body.zen-mode .plan-actions {
     opacity: 0.15;
     pointer-events: none;
     font-weight: 100;
+    z-index: 0;
 }
 
 .note-card.blocked .note-content {
     filter: blur(0.5px);
+}
+
+/* Ensure all interactive elements are always clickable in blocked cards */
+.note-card.blocked .note-header {
+    position: relative;
+    z-index: 2;
+}
+
+.note-card.blocked button,
+.note-card.blocked .note-time,
+.note-card.blocked .note-focus,
+.note-card.blocked .note-delete,
+.note-card.blocked .note-complete,
+.note-card.blocked .note-unstack,
+.note-card.blocked .note-move-up,
+.note-card.blocked .note-move-down,
+.note-card.blocked .note-edit {
+    position: relative;
+    z-index: 3;
+    pointer-events: auto !important;
 }
 
 .note-card.completed .note-content {
@@ -2957,6 +2983,43 @@ body.zen-mode .plan-actions {
     font-size: 10px;
     color: #666;
     font-style: italic;
+}
+
+/* Stack Focus All Button */
+.stack-focus-all-btn {
+    background-color: #2ecc71;
+    border: 1px solid #27ae60;
+    border-radius: 6px;
+    color: #fff;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 10px 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    align-self: flex-start;
+    margin-top: 12px;
+}
+
+.stack-focus-all-btn:hover {
+    background-color: #27ae60;
+    border-color: #229954;
+    box-shadow: 0 2px 8px rgba(46, 204, 113, 0.3);
+}
+
+.stack-focus-all-btn:active {
+    transform: scale(0.98);
+}
+
+.focus-all-icon {
+    font-size: 16px;
+}
+
+.focus-all-label {
+    font-size: 13px;
 }
 
 .stack-modal-header h3 {

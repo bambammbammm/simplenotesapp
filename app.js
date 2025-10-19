@@ -11,11 +11,6 @@ class NotesApp {
         this.welcomeMessage = document.getElementById('welcomeMessage');
         this.noteCountElement = document.querySelector('.note-count');
         this.timeStatsElement = document.getElementById('timeStats');
-        this.stackModal = document.getElementById('stackModal');
-        this.stackModalBody = document.getElementById('stackModalBody');
-        this.stackModalClose = document.getElementById('stackModalClose');
-        this.stackTitleInput = document.getElementById('stackTitleInput');
-        this.stackTypeBtn = document.getElementById('stackTypeBtn');
         this.draggedCard = null;
         this.draggedStack = null;
         this.currentStackId = null;
@@ -30,14 +25,15 @@ class NotesApp {
         this.maxUndoStack = 10; // Maximum undo history
 
         // Saved Notes
-        this.savedNotes = []; // Max 5 saved plan notes
+        this.savedNotes = [];
         this.currentSavedNoteId = null; // Currently active saved note ID
         this.savedNotesSidebar = document.getElementById('savedNotesSidebar');
         this.savedNotesList = document.getElementById('savedNotesList');
         this.savedNotesCount = document.getElementById('savedNotesCount');
         this.planSaveBtn = document.getElementById('planSaveBtn');
-        this.collapseSavedNotesBtn = document.getElementById('collapseSavedNotesBtn');
-        this.savedNotesSidebarCollapsed = false;
+        this.sidebarToggleBtn = document.getElementById('sidebarToggleBtn');
+        this.sidebarOverlay = document.getElementById('sidebarOverlay');
+        this.savedNotesSidebarVisible = false;
 
         // Command Palette
         this.commandPalette = document.getElementById('commandPalette');
@@ -179,7 +175,8 @@ class NotesApp {
         this.planNewBtn = document.getElementById('planNewBtn');
         this.planSaveBtn.addEventListener('click', () => this.promptSavePlanNote());
         this.planNewBtn.addEventListener('click', () => this.createNewNote());
-        this.collapseSavedNotesBtn.addEventListener('click', () => this.toggleSavedNotesSidebar());
+        this.sidebarToggleBtn.addEventListener('click', () => this.toggleSavedNotesSidebar());
+        this.sidebarOverlay.addEventListener('click', () => this.toggleSavedNotesSidebar());
 
         // Command Palette event listeners
         this.commandPalette.querySelector('.command-palette-overlay').addEventListener('click', () => this.closeCommandPalette());
@@ -208,10 +205,6 @@ class NotesApp {
                 this.closeHamburgerMenu();
             }
         });
-
-        // Modal event listeners
-        this.stackModalClose.addEventListener('click', () => this.closeStackModal());
-        this.stackModal.querySelector('.stack-modal-overlay').addEventListener('click', () => this.closeStackModal());
 
         // Backup event listeners
         this.selectBackupFolderBtn.addEventListener('click', () => this.selectBackupFolder());
@@ -347,12 +340,6 @@ class NotesApp {
             // Close command palette if open
             if (this.commandPalette.style.display !== 'none') {
                 this.closeCommandPalette();
-                return;
-            }
-
-            // Close stack modal if open
-            if (this.stackModal.style.display !== 'none') {
-                this.closeStackModal();
                 return;
             }
 
@@ -546,6 +533,33 @@ class NotesApp {
             this.saveNotes();
             this.render();
             this.updateWorkSidebar();
+        }
+    }
+
+    focusAllStackTasks(stackId) {
+        const stack = this.stacks.find(s => s.id === stackId);
+        if (!stack) return;
+
+        // Get all notes in this stack
+        const stackNotes = stack.noteIds
+            .map(id => this.notes.find(n => n.id === id))
+            .filter(n => n);
+
+        // Check if all are already focused
+        const allFocused = stackNotes.every(n => n.focused);
+
+        // Toggle: if all focused, unfocus all; otherwise focus all
+        stackNotes.forEach(note => {
+            note.focused = !allFocused;
+        });
+
+        this.saveNotes();
+        this.render();
+        this.updateWorkSidebar();
+
+        // Refresh modal to show updated focus states (use new Task Creator Modal)
+        if (window.TaskCreatorModal && window.TaskCreatorModal.openModalForEdit) {
+            setTimeout(() => window.TaskCreatorModal.openModalForEdit(stackId, 'stack'), 50);
         }
     }
 
@@ -1170,93 +1184,22 @@ class NotesApp {
     }
 
     openStackModal(stackId) {
-        this.currentStackId = stackId;
-        const stack = this.stacks.find(s => s.id === stackId);
-        if (!stack) return;
-
-        // Ensure stack has type property (migration for old stacks)
-        if (!stack.type) {
-            stack.type = 'group';
+        // Redirect to new Task Creator Modal
+        if (window.TaskCreatorModal && window.TaskCreatorModal.openModalForEdit) {
+            window.TaskCreatorModal.openModalForEdit(stackId, 'stack');
         }
-
-        // Set stack title in input
-        this.stackTitleInput.value = stack.title || '';
-
-        // Update stack type button
-        this.updateStackTypeButton(stack.type);
-
-        // Remove previous event listeners if any
-        if (this.stackTitleInput._changeHandler) {
-            this.stackTitleInput.removeEventListener('input', this.stackTitleInput._changeHandler);
-        }
-        if (this.stackTypeBtn._clickHandler) {
-            this.stackTypeBtn.removeEventListener('click', this.stackTypeBtn._clickHandler);
-        }
-
-        // Add event listener to save title on change
-        const changeHandler = () => {
-            stack.title = this.stackTitleInput.value.trim();
-            this.saveStacks();
-            this.render(); // Update main view to show title on top card
-        };
-        this.stackTitleInput.addEventListener('input', changeHandler);
-        this.stackTitleInput._changeHandler = changeHandler;
-
-        // Add event listener for type toggle
-        const typeClickHandler = () => {
-            stack.type = stack.type === 'group' ? 'sequential' : 'group';
-            this.updateStackTypeButton(stack.type);
-            this.saveStacks();
-            this.render();
-            // Refresh modal to update card states
-            this.openStackModal(stackId);
-        };
-        this.stackTypeBtn.addEventListener('click', typeClickHandler);
-        this.stackTypeBtn._clickHandler = typeClickHandler;
-
-        // Get notes in stack
-        const stackNotes = stack.noteIds
-            .map(id => this.notes.find(n => n.id === id))
-            .filter(n => n);
-
-        // Clear modal body
-        this.stackModalBody.innerHTML = '';
-
-        // Create cards for modal
-        stackNotes.forEach((note, index) => {
-            const isFirst = index === 0;
-            const isLast = index === stackNotes.length - 1;
-            // In sequential: last card (top of visual stack) is active, others are blocked
-            const isBlocked = stack.type === 'sequential' && index < stackNotes.length - 1;
-            const card = this.createModalCard(note, isFirst, isLast, isBlocked);
-            this.stackModalBody.appendChild(card);
-        });
-
-        // Show modal
-        this.stackModal.style.display = 'flex';
     }
 
     closeStackModal() {
-        this.stackModal.style.display = 'none';
-        this.currentStackId = null;
-        this.render(); // Re-render to update stack display
+        // Redirect to new Task Creator Modal
+        if (window.TaskCreatorModal && window.TaskCreatorModal.closeModal) {
+            window.TaskCreatorModal.closeModal();
+        }
     }
 
     updateStackTypeButton(type) {
-        const icon = this.stackTypeBtn.querySelector('.stack-type-icon');
-        const label = this.stackTypeBtn.querySelector('.stack-type-label');
-
-        if (type === 'sequential') {
-            icon.textContent = '→';
-            label.textContent = 'Sequenz';
-            this.stackTypeBtn.dataset.type = 'sequential';
-            this.stackTypeBtn.classList.add('sequential');
-        } else {
-            icon.textContent = '+';
-            label.textContent = 'Gruppe';
-            this.stackTypeBtn.dataset.type = 'group';
-            this.stackTypeBtn.classList.remove('sequential');
-        }
+        // This function is no longer needed as we use the Task Creator Modal
+        // Kept for backward compatibility but does nothing
     }
 
     saveNotes() {
@@ -4037,12 +3980,6 @@ class NotesApp {
             }
         }
 
-        // Check if max limit reached for new notes
-        if (this.savedNotes.length >= 5) {
-            alert('Maximum 5 Notizen können gespeichert werden. Bitte löschen Sie eine bestehende Notiz.');
-            return;
-        }
-
         // Prompt for name for new note
         const name = prompt('Geben Sie einen Namen für diese Notiz ein:');
         if (name && name.trim().length > 0) {
@@ -4144,24 +4081,31 @@ class NotesApp {
         });
 
         // Update counter
-        this.savedNotesCount.textContent = `${this.savedNotes.length}/5`;
+        this.savedNotesCount.textContent = `${this.savedNotes.length}`;
     }
 
     updateSavedNotesVisibility() {
-        if (this.savedNotes.length > 0) {
-            this.savedNotesSidebar.style.display = 'flex';
-        } else {
-            this.savedNotesSidebar.style.display = 'none';
+        // Sidebar is always available via toggle button, no auto-hide
+        // Just restore saved state from localStorage
+        const savedState = localStorage.getItem('savedNotesSidebarVisible');
+        if (savedState === 'true') {
+            this.savedNotesSidebarVisible = true;
+            this.savedNotesSidebar.classList.add('visible');
+            this.sidebarOverlay.classList.add('visible');
         }
     }
 
     toggleSavedNotesSidebar() {
-        this.savedNotesSidebarCollapsed = !this.savedNotesSidebarCollapsed;
-        if (this.savedNotesSidebarCollapsed) {
-            this.savedNotesSidebar.classList.add('collapsed');
+        this.savedNotesSidebarVisible = !this.savedNotesSidebarVisible;
+        if (this.savedNotesSidebarVisible) {
+            this.savedNotesSidebar.classList.add('visible');
+            this.sidebarOverlay.classList.add('visible');
         } else {
-            this.savedNotesSidebar.classList.remove('collapsed');
+            this.savedNotesSidebar.classList.remove('visible');
+            this.sidebarOverlay.classList.remove('visible');
         }
+        // Save state to localStorage
+        localStorage.setItem('savedNotesSidebarVisible', this.savedNotesSidebarVisible);
     }
 
     // ============================================
