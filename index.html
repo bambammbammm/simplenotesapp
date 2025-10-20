@@ -8,8 +8,8 @@
     <title>Simple Notes App</title>
     <link rel="icon" type="image/png" href="icon-192.png">
     <link rel="apple-touch-icon" href="icon-192.png">
-    <link rel="manifest" href="manifest.json?v=109">
-    <link rel="stylesheet" href="style.css?v=109">
+    <link rel="manifest" href="manifest.json?v=110">
+    <link rel="stylesheet" href="style.css?v=110">
 </head>
 <body>
     <div class="app-container">
@@ -225,6 +225,28 @@
             </aside>
 
             <div class="plan-main-content">
+                <!-- Time Availability Section (Notion-style properties) -->
+                <div class="time-availability-section" id="timeAvailabilitySection">
+                    <div class="time-availability-header" id="timeAvailabilityHeader">
+                        <span class="availability-icon">▶</span>
+                        <span class="availability-title">📅 Verfügbare Zeiten (heute)</span>
+                        <span class="availability-count" id="availabilityCount">0 Slots</span>
+                    </div>
+                    <div class="time-availability-body" id="timeAvailabilityBody" style="display: none;">
+                        <!-- Preset Buttons -->
+                        <div class="time-presets">
+                            <button class="time-preset-btn" id="presetMorning">Vormittag (07:30-12:00)</button>
+                            <button class="time-preset-btn" id="presetAfternoon">Nachmittag (13:00-18:00)</button>
+                            <button class="time-preset-btn" id="presetEvening">Abend (18:30-24:00)</button>
+                            <button class="time-preset-btn" id="presetClearAll">Alle löschen</button>
+                        </div>
+                        <!-- Time Slots Grid -->
+                        <div class="time-slots-grid" id="timeSlotsGrid">
+                            <!-- Will be populated by JS -->
+                        </div>
+                    </div>
+                </div>
+
                 <div class="plan-editor-container">
                     <div
                         class="plan-editor"
@@ -250,6 +272,10 @@ Tipp: Schreiben Sie (Task-Name 30m --k) um automatisch eine Aufgabe zu erstellen
                         <button class="plan-action-btn plan-save-btn" id="planSaveBtn" title="Notiz speichern">
                             <span class="action-icon">⊡</span>
                             <span class="action-label">Speichern</span>
+                        </button>
+                        <button class="plan-action-btn plan-briefing-btn" id="planBriefingBtn" title="AI Tages-Briefing generieren (Cmd+Shift+B)">
+                            <span class="action-icon">✨</span>
+                            <span class="action-label">Briefing</span>
                         </button>
 
                         <!-- Table Action Buttons (work on focused table) -->
@@ -471,9 +497,9 @@ Tipp: Schreiben Sie (Task-Name 30m --k) um automatisch eine Aufgabe zu erstellen
         </div>
     </div>
 
-    <script src="app.js?v=109"></script>
-    <script src="ui-redesign.js?v=109"></script>
-    <script src="task-creator.js?v=109"></script>
+    <script src="app.js?v=110"></script>
+    <script src="ui-redesign.js?v=110"></script>
+    <script src="task-creator.js?v=110"></script>
     <script>
         // Register Service Worker for PWA
         if ('serviceWorker' in navigator) {

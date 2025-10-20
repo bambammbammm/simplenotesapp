@@ -56,6 +56,14 @@ class NotesApp {
         this.commandPaletteCommands = [];
         this.commandPaletteKeyHeld = false;
 
+        // Time Availability (for AI briefing)
+        this.timeAvailabilitySection = document.getElementById('timeAvailabilitySection');
+        this.timeAvailabilityHeader = document.getElementById('timeAvailabilityHeader');
+        this.timeAvailabilityBody = document.getElementById('timeAvailabilityBody');
+        this.timeSlotsGrid = document.getElementById('timeSlotsGrid');
+        this.availabilityCount = document.getElementById('availabilityCount');
+        this.availableTimeSlots = []; // Array of selected time slots like ['09:00', '09:30', ...]
+
         // Hamburger menu
         this.hamburgerMenuBtn = document.getElementById('hamburgerMenuBtn');
         this.hamburgerDropdown = document.getElementById('hamburgerDropdown');
@@ -153,6 +161,9 @@ class NotesApp {
         this.loadSavedNotes();
         this.checkAndResetCounter();
 
+        // Initialize time availability
+        this.initTimeAvailability();
+
         // Initialize undo button state
         this.updateUndoButton();
 
@@ -195,6 +206,10 @@ class NotesApp {
         this.planNewBtn.addEventListener('click', () => this.createNewNote());
         this.sidebarToggleBtn.addEventListener('click', () => this.toggleSavedNotesSidebar());
         this.sidebarOverlay.addEventListener('click', () => this.toggleSavedNotesSidebar());
+
+        // AI Briefing button
+        this.planBriefingBtn = document.getElementById('planBriefingBtn');
+        this.planBriefingBtn.addEventListener('click', () => this.generateAIBriefing());
 
         // Global Table Action Buttons
         this.tableAddRowBtn = document.getElementById('tableAddRowBtn');
@@ -4203,9 +4218,16 @@ class NotesApp {
         }
 
         // Bold: Cmd/Ctrl + B
-        if (cmdOrCtrl && e.key === 'b') {
+        if (cmdOrCtrl && e.key === 'b' && !e.shiftKey) {
             e.preventDefault();
             document.execCommand('bold', false, null);
+            return;
+        }
+
+        // AI Briefing: Cmd/Ctrl + Shift + B
+        if (cmdOrCtrl && e.shiftKey && (e.key === 'b' || e.key === 'B')) {
+            e.preventDefault();
+            this.generateAIBriefing();
             return;
         }
 
@@ -4839,7 +4861,8 @@ class NotesApp {
 
         // Then parse for single task patterns: (task content time category)
         // Examples: (Meeting vorbereiten 30m --k), (Einkaufen 15m --p)
-        const taskPattern = /\(([^)]+?)\)/g;
+        // IMPORTANT: Only match if it contains time (Xm) OR category (--k/h/p/u)
+        const taskPattern = /\(([^)]+?(?:\d+m|--[khpu]).*?)\)/g;
         const matches = [...text.matchAll(taskPattern)];
 
         if (matches.length > 0) {
@@ -5654,6 +5677,560 @@ class NotesApp {
 
         // Hide toolbar
         this.hideFloatingToolbar();
+    }
+
+    // ============================================
+    // AI BRIEFING (Ollama Integration)
+    // ============================================
+
+    async generateAIBriefing() {
+        console.log('Generating AI briefing...');
+
+        // Get today's date in ISO format
+        const today = new Date();
+        const todayISO = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+        // Filter tasks for today
+        const todaysTasks = this.notes.filter(note =>
+            !note.completed && note.dueDate === todayISO
+        );
+
+        if (todaysTasks.length === 0) {
+            this.insertBriefingIntoEditor('📋 Keine Tasks für heute gefunden.\n\nErstelle Tasks mit einem Datum im Task Creator (Cmd+K) oder Calendar View.');
+            return;
+        }
+
+        // Format tasks for prompt
+        const tasksText = todaysTasks.map((task, index) => {
+            let line = `${index + 1}. ${task.content}`;
+            if (task.timeMinutes) line += ` (${task.timeMinutes}m)`;
+            if (task.category) {
+                const catMap = { k: 'KSWIL', h: 'HSLU', p: 'Privat', u: 'Unterricht' };
+                line += ` [${catMap[task.category] || task.category}]`;
+            }
+            if (task.priority) line += ` ${task.priority}`;
+            return line;
+        }).join('\n');
+
+        const totalTime = todaysTasks.reduce((sum, t) => sum + (t.timeMinutes || 0), 0);
+
+        // Get available time blocks
+        const { blocks, totalMinutes, breaks } = this.getTimeBlocksAndBreaks();
+
+        // Calculate optimal schedule (let JS do the math, not the AI!)
+        const schedulingResult = this.calculateOptimalSchedule(todaysTasks, blocks);
+
+        // Build schedule text for prompt (JS did the math!)
+        let scheduleText = '';
+        let warningsText = '';
+
+        if (schedulingResult.warnings.length > 0) {
+            warningsText = '\n\n⚠️ WARNUNGEN:\n' + schedulingResult.warnings.join('\n');
+        }
+
+        if (schedulingResult.scheduled.length > 0) {
+            scheduleText = '\n\nBERECHNETER ZEITPLAN:\n';
+            schedulingResult.scheduled.forEach(item => {
+                const task = item.task;
+                const priorityStr = task.priority || '';
+                const categoryMap = { k: 'KSWIL', h: 'HSLU', p: 'Privat', u: 'Unterricht' };
+                const categoryStr = task.category ? categoryMap[task.category] : '';
+
+                // Choose emoji based on category and priority
+                let emoji = '📋'; // Default
+                if (task.category === 'k') emoji = '💼'; // KSWIL - Briefcase
+                else if (task.category === 'h') emoji = '🎓'; // HSLU - Graduation cap
+                else if (task.category === 'p') emoji = '🏠'; // Privat - House
+                else if (task.category === 'u') emoji = '📚'; // Unterricht - Books
+
+                // Override with priority emojis if high priority
+                if (task.priority === '!!!') emoji = '🔥'; // Highest priority
+                else if (task.priority === '!!') emoji = '⚡'; // Medium priority
+
+                // Show split info if task is split
+                let splitInfo = '';
+                if (item.isSplit && item.splitTotal) {
+                    splitInfo = ` (Teil ${item.splitPart}/${item.splitTotal})`;
+                }
+
+                // Format: emoji **Zeit**: Taskname | Kategorie | Priorität | Dauer
+                let line = `${emoji} **${item.startTime}-${item.endTime}**: ${task.content}`;
+
+                if (categoryStr) line += ` | ${categoryStr}`;
+                if (priorityStr) line += ` | ${priorityStr}`;
+                if (splitInfo) line += splitInfo;
+                line += ` | ${item.duration}min`;
+
+                scheduleText += line + '\n';
+            });
+        }
+
+        if (schedulingResult.unscheduled.length > 0) {
+            scheduleText += '\n\nNICHT EINGEPLANT (passen nicht in Zeitfenster):\n';
+            schedulingResult.unscheduled.forEach(task => {
+                scheduleText += `• ${task.content} (${task.timeMinutes || 15}min)\n`;
+            });
+        }
+
+        // Build prompt for Ollama (AI only writes nice text, math is done!)
+        const prompt = `Erstelle ein motivierendes Tages-Briefing für ${today.toLocaleDateString('de-DE', { weekday: 'long' })}.
+
+DEINE AUFGABE: Schreibe einen schönen Text um den fertigen Zeitplan herum. Das Scheduling wurde bereits mathematisch korrekt berechnet!
+
+${todaysTasks.length} Aufgaben für heute (${totalTime}min)${scheduleText}${warningsText}
+
+AUSGABE-FORMAT:
+
+## 🌅 Tages-Briefing - ${today.toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
+
+**Überblick:**
+[Fasse zusammen: Anzahl Tasks, Gesamtzeit, ob alles passt oder Probleme]
+
+**Zeitplan:**
+${schedulingResult.scheduled.length > 0 ? '[Kopiere den BERECHNETEN ZEITPLAN oben 1:1 (exakte Zeiten!). Füge kurze Kommentare hinzu.]' : '[Erkläre dass Zeitfenster ausgewählt werden müssen]'}
+
+**Tipps:**
+[1-2 konkrete Tipps basierend auf Prioritäten und Warnungen]
+
+**Motivation:**
+[Ein motivierender Satz]
+
+WICHTIG: Ändere KEINE Zeiten aus dem berechneten Zeitplan! Kopiere sie exakt.`;
+
+        // Show loading state
+        this.insertBriefingIntoEditor('✨ Generiere Briefing mit lokaler KI (gemma3:4b)...\n\n');
+
+        try {
+            // Call Ollama API
+            const response = await fetch('http://127.0.0.1:11434/api/generate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    model: 'gemma3:4b',
+                    prompt: prompt,
+                    stream: false
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Ollama API Error: ${response.status} ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            const briefingText = data.response;
+
+            // Convert Markdown to HTML
+            const briefingHTML = this.markdownToHTML(briefingText);
+
+            // Insert briefing into editor as HTML
+            this.insertBriefingIntoEditor(briefingHTML, true); // true = HTML mode
+
+            console.log('AI Briefing generated successfully');
+
+        } catch (error) {
+            console.error('Error generating AI briefing:', error);
+
+            let errorMessage = '❌ Fehler beim Generieren des Briefings\n\n';
+
+            if (error.message.includes('Failed to fetch')) {
+                errorMessage += '**Ollama ist nicht erreichbar.**\n\n';
+                errorMessage += 'Bitte stelle sicher, dass:\n';
+                errorMessage += '1. Ollama läuft (http://127.0.0.1:11434)\n';
+                errorMessage += '2. Das Modell "gemma3:4b" installiert ist\n\n';
+                errorMessage += 'Starte Ollama mit: `ollama serve`\n';
+                errorMessage += 'Installiere Modell mit: `ollama pull gemma3:4b`';
+            } else {
+                errorMessage += `**Fehler:** ${error.message}`;
+            }
+
+            this.insertBriefingIntoEditor(errorMessage);
+        }
+    }
+
+    insertBriefingIntoEditor(content, isHTML = false) {
+        // Insert briefing at cursor position or at the end
+        const selection = window.getSelection();
+        const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+
+        if (isHTML) {
+            // Insert as HTML
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = content;
+
+            if (range && this.planEditor.contains(range.commonAncestorContainer)) {
+                // Insert at cursor
+                range.deleteContents();
+
+                // Insert all child nodes
+                const fragment = document.createDocumentFragment();
+                while (tempDiv.firstChild) {
+                    fragment.appendChild(tempDiv.firstChild);
+                }
+                range.insertNode(fragment);
+            } else {
+                // Insert at end
+                while (tempDiv.firstChild) {
+                    this.planEditor.appendChild(tempDiv.firstChild);
+                }
+            }
+        } else {
+            // Insert as plain text
+            if (range && this.planEditor.contains(range.commonAncestorContainer)) {
+                // Insert at cursor
+                range.deleteContents();
+
+                // Create text node with briefing
+                const lines = content.split('\n');
+                lines.forEach((line, index) => {
+                    if (index > 0) {
+                        range.insertNode(document.createElement('br'));
+                    }
+                    range.insertNode(document.createTextNode(line));
+                    range.collapse(false);
+                });
+            } else {
+                // Insert at end
+                const lines = content.split('\n');
+                lines.forEach((line, index) => {
+                    if (index > 0) {
+                        this.planEditor.appendChild(document.createElement('br'));
+                    }
+                    this.planEditor.appendChild(document.createTextNode(line));
+                });
+            }
+        }
+
+        // Save plan text
+        this.savePlanText();
+
+        // Focus editor
+        this.planEditor.focus();
+    }
+
+    // Simple Markdown to HTML converter
+    markdownToHTML(markdown) {
+        let html = markdown;
+
+        // Headers (##, ###)
+        html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+        html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+        html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+
+        // Bold (**text**)
+        html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+
+        // Italic (*text*)
+        html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+
+        // Bullet lists (• or -)
+        html = html.replace(/^[•\-] (.+)$/gm, '<li>$1</li>');
+
+        // Wrap consecutive <li> in <ul>
+        html = html.replace(/(<li>.*<\/li>\n?)+/g, (match) => {
+            return '<ul>' + match + '</ul>';
+        });
+
+        // Line breaks
+        html = html.replace(/\n\n/g, '<br><br>');
+        html = html.replace(/\n/g, '<br>');
+
+        return html;
+    }
+
+    // ============================================
+    // TIME AVAILABILITY (for AI Briefing)
+    // ============================================
+
+    initTimeAvailability() {
+        // Generate time slots from 07:30 to 24:00 in 30min intervals
+        this.generateTimeSlots();
+
+        // Load saved time slots for today
+        this.loadAvailableTimeSlots();
+
+        // Collapsible header
+        this.timeAvailabilityHeader.addEventListener('click', () => this.toggleTimeAvailability());
+
+        // Preset buttons
+        document.getElementById('presetMorning').addEventListener('click', () => this.setPreset('morning'));
+        document.getElementById('presetAfternoon').addEventListener('click', () => this.setPreset('afternoon'));
+        document.getElementById('presetEvening').addEventListener('click', () => this.setPreset('evening'));
+        document.getElementById('presetClearAll').addEventListener('click', () => this.clearAllTimeSlots());
+    }
+
+    generateTimeSlots() {
+        // Generate from 07:30 to 24:00
+        const slots = [];
+        for (let hour = 7; hour < 24; hour++) {
+            if (hour === 7) {
+                slots.push('07:30');
+            } else {
+                slots.push(`${String(hour).padStart(2, '0')}:00`);
+                slots.push(`${String(hour).padStart(2, '0')}:30`);
+            }
+        }
+        slots.push('24:00'); // Last slot
+
+        // Render slots
+        this.timeSlotsGrid.innerHTML = '';
+        slots.forEach(slot => {
+            const button = document.createElement('button');
+            button.className = 'time-slot';
+            button.textContent = slot;
+            button.dataset.time = slot;
+            button.addEventListener('click', () => this.toggleTimeSlot(slot));
+            this.timeSlotsGrid.appendChild(button);
+        });
+    }
+
+    toggleTimeAvailability() {
+        const isExpanded = this.timeAvailabilitySection.classList.toggle('expanded');
+        this.timeAvailabilityBody.style.display = isExpanded ? 'flex' : 'none';
+    }
+
+    toggleTimeSlot(slot) {
+        const index = this.availableTimeSlots.indexOf(slot);
+        if (index > -1) {
+            this.availableTimeSlots.splice(index, 1);
+        } else {
+            this.availableTimeSlots.push(slot);
+        }
+
+        this.saveAvailableTimeSlots();
+        this.updateTimeSlotsUI();
+    }
+
+    setPreset(preset) {
+        const presets = {
+            morning: ['07:30', '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00'],
+            afternoon: ['13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00'],
+            evening: ['18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00', '23:30', '24:00']
+        };
+
+        // Add preset slots (without duplicates)
+        const presetSlots = presets[preset] || [];
+        presetSlots.forEach(slot => {
+            if (!this.availableTimeSlots.includes(slot)) {
+                this.availableTimeSlots.push(slot);
+            }
+        });
+
+        // Sort chronologically
+        this.availableTimeSlots.sort();
+
+        this.saveAvailableTimeSlots();
+        this.updateTimeSlotsUI();
+    }
+
+    clearAllTimeSlots() {
+        this.availableTimeSlots = [];
+        this.saveAvailableTimeSlots();
+        this.updateTimeSlotsUI();
+    }
+
+    updateTimeSlotsUI() {
+        // Update visual state
+        document.querySelectorAll('.time-slot').forEach(button => {
+            const slot = button.dataset.time;
+            if (this.availableTimeSlots.includes(slot)) {
+                button.classList.add('selected');
+            } else {
+                button.classList.remove('selected');
+            }
+        });
+
+        // Update count
+        this.availabilityCount.textContent = `${this.availableTimeSlots.length} Slots`;
+    }
+
+    saveAvailableTimeSlots() {
+        const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+        localStorage.setItem(`availableTimeSlots_${today}`, JSON.stringify(this.availableTimeSlots));
+    }
+
+    loadAvailableTimeSlots() {
+        const today = new Date().toISOString().split('T')[0];
+        const saved = localStorage.getItem(`availableTimeSlots_${today}`);
+
+        if (saved) {
+            this.availableTimeSlots = JSON.parse(saved);
+        } else {
+            this.availableTimeSlots = [];
+        }
+
+        this.updateTimeSlotsUI();
+    }
+
+    // Calculate time blocks and breaks from selected slots
+    getTimeBlocksAndBreaks() {
+        if (this.availableTimeSlots.length === 0) {
+            return { blocks: [], totalMinutes: 0, breaks: [] };
+        }
+
+        // Sort slots chronologically
+        const sorted = [...this.availableTimeSlots].sort();
+
+        // Group consecutive slots into blocks
+        const blocks = [];
+        const breaks = [];
+        let currentBlock = { start: sorted[0], end: sorted[0] };
+
+        for (let i = 1; i < sorted.length; i++) {
+            const prevSlot = sorted[i - 1];
+            const currSlot = sorted[i];
+
+            // Check if slots are consecutive (30min apart)
+            const prevTime = this.timeToMinutes(prevSlot);
+            const currTime = this.timeToMinutes(currSlot);
+
+            if (currTime - prevTime === 30) {
+                // Consecutive - extend block
+                currentBlock.end = currSlot;
+            } else {
+                // Gap found - save block and start new one
+                blocks.push({ ...currentBlock });
+
+                // Calculate break duration
+                const breakMinutes = currTime - prevTime - 30;
+                if (breakMinutes > 0) {
+                    breaks.push({
+                        after: prevSlot,
+                        duration: breakMinutes
+                    });
+                }
+
+                currentBlock = { start: currSlot, end: currSlot };
+            }
+        }
+
+        // Add last block
+        blocks.push(currentBlock);
+
+        // Calculate total available minutes
+        const totalMinutes = blocks.reduce((sum, block) => {
+            const start = this.timeToMinutes(block.start);
+            const end = this.timeToMinutes(block.end);
+            return sum + (end - start + 30); // +30 because end slot is inclusive
+        }, 0);
+
+        return { blocks, totalMinutes, breaks };
+    }
+
+    timeToMinutes(timeStr) {
+        const [hours, minutes] = timeStr.split(':').map(Number);
+        return hours * 60 + minutes;
+    }
+
+    minutesToTime(minutes) {
+        const hours = Math.floor(minutes / 60);
+        const mins = minutes % 60;
+        return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+    }
+
+    // ============================================
+    // TASK SCHEDULING ALGORITHM
+    // ============================================
+
+    calculateOptimalSchedule(tasks, blocks) {
+        if (blocks.length === 0) {
+            return {
+                scheduled: [],
+                unscheduled: tasks,
+                warnings: ['Keine Zeitfenster ausgewählt! Bitte wähle verfügbare Zeiten aus.']
+            };
+        }
+
+        // Sort tasks by priority (descending) then by time (ascending)
+        const priorityMap = { '!!!': 3, '!!': 2, '!': 1 };
+        const sortedTasks = [...tasks].sort((a, b) => {
+            const aPrio = priorityMap[a.priority] || 0;
+            const bPrio = priorityMap[b.priority] || 0;
+            if (aPrio !== bPrio) return bPrio - aPrio; // Higher priority first
+            return (a.timeMinutes || 0) - (b.timeMinutes || 0); // Shorter tasks first
+        });
+
+        const scheduled = [];
+        const unscheduled = [];
+        const warnings = [];
+
+        // Track remaining time in each block
+        const blockCapacity = blocks.map(block => ({
+            ...block,
+            remainingMinutes: this.timeToMinutes(block.end) - this.timeToMinutes(block.start) + 30,
+            currentTime: this.timeToMinutes(block.start)
+        }));
+
+        // Try to fit each task into blocks (with splitting if needed)
+        for (const task of sortedTasks) {
+            let taskDuration = task.timeMinutes || 15; // Default 15min if not specified
+            let remainingDuration = taskDuration;
+            let fitted = false;
+            let splitParts = [];
+
+            // Try to fit task (possibly split across multiple blocks)
+            for (const block of blockCapacity) {
+                if (remainingDuration <= 0) break;
+
+                if (block.remainingMinutes > 0) {
+                    // Fit as much as possible in this block
+                    const fitDuration = Math.min(remainingDuration, block.remainingMinutes);
+                    const startTime = this.minutesToTime(block.currentTime);
+                    const endTime = this.minutesToTime(block.currentTime + fitDuration);
+
+                    splitParts.push({
+                        task: task,
+                        startTime: startTime,
+                        endTime: endTime,
+                        duration: fitDuration,
+                        block: `${block.start}-${block.end}`,
+                        isSplit: taskDuration > fitDuration || splitParts.length > 0,
+                        splitPart: splitParts.length + 1,
+                        splitTotal: null // Will be set later
+                    });
+
+                    // Update block capacity
+                    block.currentTime += fitDuration;
+                    block.remainingMinutes -= fitDuration;
+                    remainingDuration -= fitDuration;
+                    fitted = true;
+                }
+            }
+
+            if (fitted && remainingDuration === 0) {
+                // Task fully scheduled (possibly split)
+                if (splitParts.length > 1) {
+                    // Update split totals
+                    splitParts.forEach(part => {
+                        part.splitTotal = splitParts.length;
+                    });
+                    warnings.push(`ℹ️ "${task.content}" wurde auf ${splitParts.length} Zeitblöcke aufgeteilt`);
+                }
+                scheduled.push(...splitParts);
+            } else if (fitted && remainingDuration > 0) {
+                // Partially scheduled
+                scheduled.push(...splitParts);
+                unscheduled.push(task);
+                warnings.push(`⚠️ "${task.content}": Nur ${taskDuration - remainingDuration}min von ${taskDuration}min eingeplant. ${remainingDuration}min fehlen noch!`);
+            } else {
+                // Not scheduled at all
+                unscheduled.push(task);
+                warnings.push(`⚠️ "${task.content}" (${taskDuration}min) passt nicht in verbleibende Zeitfenster!`);
+            }
+        }
+
+        // Check if total time fits
+        const totalTaskTime = tasks.reduce((sum, t) => sum + (t.timeMinutes || 15), 0);
+        const totalAvailable = blocks.reduce((sum, b) =>
+            sum + (this.timeToMinutes(b.end) - this.timeToMinutes(b.start) + 30), 0
+        );
+
+        if (totalTaskTime > totalAvailable) {
+            warnings.unshift(`⚠️ ZEITPROBLEM: ${totalTaskTime}min Aufgaben aber nur ${totalAvailable}min verfügbar!`);
+        }
+
+        return { scheduled, unscheduled, warnings };
     }
 
 }
