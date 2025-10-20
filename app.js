@@ -512,6 +512,9 @@ class NotesApp {
                     this.saveStacks();
                     this.render();
 
+                    // Update task icons in plan mode to reflect completion
+                    this.updatePlanTaskIcons();
+
                     // Recalculate timer if it was running and note was focused
                     if (timerWasRunning && wasFocused) {
                         this.recalculateTimer();
@@ -4034,6 +4037,9 @@ class NotesApp {
                 break;
         }
 
+        // Update task icons in plan mode
+        this.updatePlanTaskIcons();
+
         // Update button state and close dropdown
         this.updateUndoButton();
         this.closeUndoDropdown();
@@ -4445,7 +4451,7 @@ class NotesApp {
                         // Replace entire block with green confirmation
                         const stackSymbol = stackType === 'seq' ? '→' : '+';
                         // Add a div wrapper and ensure text after it starts fresh (not green)
-                        const confirmation = `<div><span class="stack-created-animation" style="color: #2ecc71;">${stackType}: ${stackTitle} [${stackSymbol} ${createdNotes.length} Tasks] ✓</span></div><div><br></div>`;
+                        const confirmation = `<div><span class="stack-created-animation task-icon" data-stack-id="${stack.id}" style="color: #2ecc71;">${stackType}: ${stackTitle} [${stackSymbol} ${createdNotes.length} Tasks] ✓</span></div><div><br></div>`;
 
                         // Build a simple search pattern for the entire block in plain text
                         // Then replace it in the HTML by finding and replacing the title + all bullets + /
@@ -4571,7 +4577,7 @@ class NotesApp {
                         // Replace () with [] to mark as processed in HTML
                         const currentHTML = this.planEditor.innerHTML;
                         const escapedMatch = fullMatch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                        const newHTML = currentHTML.replace(new RegExp(escapedMatch), `<span class="stack-created-animation" style="color: #2ecc71;">[${innerContent}] ✓</span>&nbsp;`);
+                        const newHTML = currentHTML.replace(new RegExp(escapedMatch), `<span class="stack-created-animation task-icon" data-note-id="${note.id}" style="color: #2ecc71;">[${innerContent}] ✓</span>&nbsp;`);
                         this.planEditor.innerHTML = newHTML;
 
                         // Move cursor outside the green span
@@ -4602,6 +4608,52 @@ class NotesApp {
         }
         // Update existing tables with new buttons (for backwards compatibility)
         this.updateExistingTables();
+        // Update task icons to reflect completed state
+        this.updatePlanTaskIcons();
+    }
+
+    updatePlanTaskIcons() {
+        // Find all task icons in the plan editor (both single tasks and stacks)
+        const taskIcons = this.planEditor.querySelectorAll('.task-icon[data-note-id]');
+        const stackIcons = this.planEditor.querySelectorAll('.task-icon[data-stack-id]');
+
+        // Update single task icons
+        taskIcons.forEach(icon => {
+            const noteId = parseFloat(icon.getAttribute('data-note-id'));
+            const note = this.notes.find(n => n.id === noteId);
+
+            if (note) {
+                // Note still exists → not completed → remove completed class
+                icon.classList.remove('completed');
+            } else {
+                // Note doesn't exist anymore → was completed/deleted → add completed class
+                icon.classList.add('completed');
+            }
+        });
+
+        // Update stack icons
+        stackIcons.forEach(icon => {
+            const stackId = parseFloat(icon.getAttribute('data-stack-id'));
+            const stack = this.stacks.find(s => s.id === stackId);
+
+            if (stack) {
+                // Stack exists - check if all its notes are completed
+                const stackNotes = stack.noteIds
+                    .map(id => this.notes.find(n => n.id === id))
+                    .filter(n => n); // Filter out deleted notes
+
+                if (stackNotes.length === 0) {
+                    // All notes in stack are completed/deleted
+                    icon.classList.add('completed');
+                } else {
+                    // At least one note still exists → stack not completed
+                    icon.classList.remove('completed');
+                }
+            } else {
+                // Stack doesn't exist anymore → mark as completed
+                icon.classList.add('completed');
+            }
+        });
     }
 
     updateExistingTables() {

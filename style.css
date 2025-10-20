@@ -3658,6 +3658,13 @@ body.zen-mode .plan-actions {
     animation: stackCreated 0.5s ease-out;
 }
 
+/* Task icon in completed state */
+.task-icon.completed {
+    color: #7f8c8d !important;
+    text-decoration: line-through;
+    opacity: 0.6;
+}
+
 /* Pulse effect for newly created items - opacity-based, 2 pulses */
 @keyframes pulse {
     0% {

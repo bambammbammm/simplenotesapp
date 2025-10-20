@@ -679,7 +679,7 @@
         // Insert a clickable icon at cursor position
         // Icon shows task name
         const icon = document.createElement('span');
-        icon.className = 'plan-task-icon';
+        icon.className = 'plan-task-icon task-icon';
         icon.contentEditable = 'false';
         icon.textContent = note.content;
         icon.dataset.noteId = note.id;
@@ -842,7 +842,7 @@
         // Insert a clickable icon for stack
         // Icon shows stack title with type prefix
         const icon = document.createElement('span');
-        icon.className = 'plan-task-icon plan-stack-icon';
+        icon.className = 'plan-task-icon plan-stack-icon task-icon';
         icon.contentEditable = 'false';
         const typePrefix = stack.type === 'group' ? '[+] ' : '[→] ';
         icon.textContent = typePrefix + stack.title;
