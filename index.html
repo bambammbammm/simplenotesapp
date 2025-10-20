@@ -8,8 +8,8 @@
     <title>Simple Notes App</title>
     <link rel="icon" type="image/png" href="icon-192.png">
     <link rel="apple-touch-icon" href="icon-192.png">
-    <link rel="manifest" href="manifest.json?v=100">
-    <link rel="stylesheet" href="style.css?v=100">
+    <link rel="manifest" href="manifest.json?v=101">
+    <link rel="stylesheet" href="style.css?v=101">
 </head>
 <body>
     <div class="app-container">
@@ -290,6 +290,38 @@ Tipp: Schreiben Sie (Task-Name 30m --k) um automatisch eine Aufgabe zu erstellen
                             <span class="action-icon">⊡</span>
                             <span class="action-label">Speichern</span>
                         </button>
+
+                        <!-- Table Action Buttons (work on focused table) -->
+                        <div class="table-actions-divider"></div>
+
+                        <button class="plan-action-btn table-action-btn" id="tableAddRowBtn" title="Zeile hinzufügen" disabled>
+                            <span class="action-icon">+</span>
+                            <span class="action-label">Row</span>
+                        </button>
+                        <button class="plan-action-btn table-action-btn" id="tableAddColBtn" title="Spalte hinzufügen" disabled>
+                            <span class="action-icon">+</span>
+                            <span class="action-label">Column</span>
+                        </button>
+                        <button class="plan-action-btn table-action-btn" id="tableMoveRowUpBtn" title="Zeile nach oben" disabled>
+                            <span class="action-icon">↑</span>
+                            <span class="action-label">Zeile</span>
+                        </button>
+                        <button class="plan-action-btn table-action-btn" id="tableMoveRowDownBtn" title="Zeile nach unten" disabled>
+                            <span class="action-icon">↓</span>
+                            <span class="action-label">Zeile</span>
+                        </button>
+                        <button class="plan-action-btn table-action-btn" id="tableMoveColLeftBtn" title="Spalte nach links" disabled>
+                            <span class="action-icon">←</span>
+                            <span class="action-label">Spalte</span>
+                        </button>
+                        <button class="plan-action-btn table-action-btn" id="tableMoveColRightBtn" title="Spalte nach rechts" disabled>
+                            <span class="action-icon">→</span>
+                            <span class="action-label">Spalte</span>
+                        </button>
+                        <button class="plan-action-btn table-action-btn table-delete-btn" id="tableDeleteBtn" title="Tabelle löschen" disabled>
+                            <span class="action-icon">×</span>
+                            <span class="action-label">Delete</span>
+                        </button>
                     </div>
                 </div>
 
@@ -487,9 +519,9 @@ Tipp: Schreiben Sie (Task-Name 30m --k) um automatisch eine Aufgabe zu erstellen
         </div>
     </div>
 
-    <script src="app.js?v=100"></script>
-    <script src="ui-redesign.js?v=100"></script>
-    <script src="task-creator.js?v=100"></script>
+    <script src="app.js?v=101"></script>
+    <script src="ui-redesign.js?v=101"></script>
+    <script src="task-creator.js?v=101"></script>
     <script>
         // Register Service Worker for PWA
         if ('serviceWorker' in navigator) {

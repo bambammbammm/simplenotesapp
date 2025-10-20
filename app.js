@@ -23,6 +23,7 @@ class NotesApp {
         this.newlyCreatedNoteIds = new Set(); // Track newly created notes for animation
         this.undoStack = []; // Stack of actions for undo functionality
         this.maxUndoStack = 10; // Maximum undo history
+        this.currentFocusedTable = null; // Currently focused table for global table actions
 
         // Saved Notes
         this.savedNotes = [];
@@ -181,6 +182,28 @@ class NotesApp {
         this.planNewBtn.addEventListener('click', () => this.createNewNote());
         this.sidebarToggleBtn.addEventListener('click', () => this.toggleSavedNotesSidebar());
         this.sidebarOverlay.addEventListener('click', () => this.toggleSavedNotesSidebar());
+
+        // Global Table Action Buttons
+        this.tableAddRowBtn = document.getElementById('tableAddRowBtn');
+        this.tableAddColBtn = document.getElementById('tableAddColBtn');
+        this.tableMoveRowUpBtn = document.getElementById('tableMoveRowUpBtn');
+        this.tableMoveRowDownBtn = document.getElementById('tableMoveRowDownBtn');
+        this.tableMoveColLeftBtn = document.getElementById('tableMoveColLeftBtn');
+        this.tableMoveColRightBtn = document.getElementById('tableMoveColRightBtn');
+        this.tableDeleteBtn = document.getElementById('tableDeleteBtn');
+
+        this.tableAddRowBtn.addEventListener('click', () => this.addTableRow(this.currentFocusedTable));
+        this.tableAddColBtn.addEventListener('click', () => this.addTableColumn(this.currentFocusedTable));
+        this.tableMoveRowUpBtn.addEventListener('click', () => this.moveTableRow(this.currentFocusedTable, 'up'));
+        this.tableMoveRowDownBtn.addEventListener('click', () => this.moveTableRow(this.currentFocusedTable, 'down'));
+        this.tableMoveColLeftBtn.addEventListener('click', () => this.moveTableColumn(this.currentFocusedTable, 'left'));
+        this.tableMoveColRightBtn.addEventListener('click', () => this.moveTableColumn(this.currentFocusedTable, 'right'));
+        this.tableDeleteBtn.addEventListener('click', () => {
+            if (this.currentFocusedTable) {
+                const wrapper = this.currentFocusedTable.closest('.table-wrapper');
+                if (wrapper) this.deleteTable(wrapper);
+            }
+        });
 
         // Command Palette event listeners
         this.commandPalette.querySelector('.command-palette-overlay').addEventListener('click', () => this.closeCommandPalette());
@@ -3486,6 +3509,7 @@ class NotesApp {
             // Track focus for move operations
             th.addEventListener('focus', () => {
                 table._lastFocusedCell = th;
+                this.setCurrentFocusedTable(table);
             });
             headerRow.appendChild(th);
         });
@@ -3503,6 +3527,7 @@ class NotesApp {
                 // Track focus for move operations
                 td.addEventListener('focus', () => {
                     table._lastFocusedCell = td;
+                    this.setCurrentFocusedTable(table);
                 });
                 tr.appendChild(td);
             });
@@ -3513,55 +3538,7 @@ class NotesApp {
         // Add table to wrapper
         wrapper.appendChild(table);
 
-        // Create action buttons
-        const actions = document.createElement('div');
-        actions.className = 'table-actions';
-        actions.contentEditable = 'false';
-
-        const addRowBtn = document.createElement('button');
-        addRowBtn.className = 'table-action-btn';
-        addRowBtn.textContent = '+ Row';
-        addRowBtn.addEventListener('click', () => this.addTableRow(table));
-
-        const addColBtn = document.createElement('button');
-        addColBtn.className = 'table-action-btn';
-        addColBtn.textContent = '+ Column';
-        addColBtn.addEventListener('click', () => this.addTableColumn(table));
-
-        const moveRowUpBtn = document.createElement('button');
-        moveRowUpBtn.className = 'table-action-btn';
-        moveRowUpBtn.textContent = '↑ Zeile';
-        moveRowUpBtn.addEventListener('click', () => this.moveTableRow(table, 'up'));
-
-        const moveRowDownBtn = document.createElement('button');
-        moveRowDownBtn.className = 'table-action-btn';
-        moveRowDownBtn.textContent = 'Zeile ↓';
-        moveRowDownBtn.addEventListener('click', () => this.moveTableRow(table, 'down'));
-
-        const moveColLeftBtn = document.createElement('button');
-        moveColLeftBtn.className = 'table-action-btn';
-        moveColLeftBtn.textContent = '← Spalte';
-        moveColLeftBtn.addEventListener('click', () => this.moveTableColumn(table, 'left'));
-
-        const moveColRightBtn = document.createElement('button');
-        moveColRightBtn.className = 'table-action-btn';
-        moveColRightBtn.textContent = 'Spalte →';
-        moveColRightBtn.addEventListener('click', () => this.moveTableColumn(table, 'right'));
-
-        const deleteTableBtn = document.createElement('button');
-        deleteTableBtn.className = 'table-action-btn delete';
-        deleteTableBtn.textContent = '× Delete Table';
-        deleteTableBtn.addEventListener('click', () => this.deleteTable(wrapper));
-
-        actions.appendChild(addRowBtn);
-        actions.appendChild(addColBtn);
-        actions.appendChild(moveRowUpBtn);
-        actions.appendChild(moveRowDownBtn);
-        actions.appendChild(moveColLeftBtn);
-        actions.appendChild(moveColRightBtn);
-        actions.appendChild(deleteTableBtn);
-
-        wrapper.appendChild(actions);
+        // No longer creating per-table buttons - using global buttons instead
 
         return wrapper;
     }
@@ -3578,6 +3555,7 @@ class NotesApp {
             // Track focus for move operations
             td.addEventListener('focus', () => {
                 table._lastFocusedCell = td;
+                this.setCurrentFocusedTable(table);
             });
             newRow.appendChild(td);
         }
@@ -3601,6 +3579,7 @@ class NotesApp {
         // Track focus for move operations
         newTh.addEventListener('focus', () => {
             table._lastFocusedCell = newTh;
+            this.setCurrentFocusedTable(table);
         });
         headerRow.appendChild(newTh);
 
@@ -3613,6 +3592,7 @@ class NotesApp {
             // Track focus for move operations
             newTd.addEventListener('focus', () => {
                 table._lastFocusedCell = newTd;
+                this.setCurrentFocusedTable(table);
             });
             row.appendChild(newTd);
         });
@@ -3626,8 +3606,27 @@ class NotesApp {
     deleteTable(wrapper) {
         if (confirm('Tabelle wirklich löschen?')) {
             wrapper.remove();
+            this.currentFocusedTable = null;
+            this.updateTableButtonsState();
             this.savePlanText();
         }
+    }
+
+    setCurrentFocusedTable(table) {
+        this.currentFocusedTable = table;
+        this.updateTableButtonsState();
+    }
+
+    updateTableButtonsState() {
+        const isTableFocused = this.currentFocusedTable !== null;
+
+        this.tableAddRowBtn.disabled = !isTableFocused;
+        this.tableAddColBtn.disabled = !isTableFocused;
+        this.tableMoveRowUpBtn.disabled = !isTableFocused;
+        this.tableMoveRowDownBtn.disabled = !isTableFocused;
+        this.tableMoveColLeftBtn.disabled = !isTableFocused;
+        this.tableMoveColRightBtn.disabled = !isTableFocused;
+        this.tableDeleteBtn.disabled = !isTableFocused;
     }
 
     moveTableRow(table, direction) {
@@ -4665,78 +4664,24 @@ class NotesApp {
             if (!table._lastFocusedCell) {
                 table._lastFocusedCell = null;
 
-                // Add focus listeners to all cells
+                // Add focus listeners to all cells (with global button support)
                 const allCells = table.querySelectorAll('th, td');
                 allCells.forEach(cell => {
                     cell.addEventListener('focus', () => {
                         table._lastFocusedCell = cell;
+                        this.setCurrentFocusedTable(table);
                     });
                 });
             }
 
-            // Find the parent wrapper
+            // Remove old table-actions divs (no longer needed, using global buttons)
             const wrapper = table.closest('.table-wrapper');
-            if (!wrapper) return;
-
-            // Find the actions div
-            let actions = wrapper.querySelector('.table-actions');
-            if (!actions) {
-                // Create actions div if it doesn't exist
-                actions = document.createElement('div');
-                actions.className = 'table-actions';
-                actions.contentEditable = 'false';
-                wrapper.appendChild(actions);
+            if (wrapper) {
+                const oldActions = wrapper.querySelector('.table-actions');
+                if (oldActions) {
+                    oldActions.remove();
+                }
             }
-
-            // Check if move buttons already exist
-            const hasMoveButtons = actions.querySelector('button[textContent*="↑"]') !== null;
-            if (hasMoveButtons) return; // Already updated
-
-            // Clear and rebuild all buttons
-            actions.innerHTML = '';
-
-            const addRowBtn = document.createElement('button');
-            addRowBtn.className = 'table-action-btn';
-            addRowBtn.textContent = '+ Row';
-            addRowBtn.addEventListener('click', () => this.addTableRow(table));
-
-            const addColBtn = document.createElement('button');
-            addColBtn.className = 'table-action-btn';
-            addColBtn.textContent = '+ Column';
-            addColBtn.addEventListener('click', () => this.addTableColumn(table));
-
-            const moveRowUpBtn = document.createElement('button');
-            moveRowUpBtn.className = 'table-action-btn';
-            moveRowUpBtn.textContent = '↑ Zeile';
-            moveRowUpBtn.addEventListener('click', () => this.moveTableRow(table, 'up'));
-
-            const moveRowDownBtn = document.createElement('button');
-            moveRowDownBtn.className = 'table-action-btn';
-            moveRowDownBtn.textContent = 'Zeile ↓';
-            moveRowDownBtn.addEventListener('click', () => this.moveTableRow(table, 'down'));
-
-            const moveColLeftBtn = document.createElement('button');
-            moveColLeftBtn.className = 'table-action-btn';
-            moveColLeftBtn.textContent = '← Spalte';
-            moveColLeftBtn.addEventListener('click', () => this.moveTableColumn(table, 'left'));
-
-            const moveColRightBtn = document.createElement('button');
-            moveColRightBtn.className = 'table-action-btn';
-            moveColRightBtn.textContent = 'Spalte →';
-            moveColRightBtn.addEventListener('click', () => this.moveTableColumn(table, 'right'));
-
-            const deleteTableBtn = document.createElement('button');
-            deleteTableBtn.className = 'table-action-btn delete';
-            deleteTableBtn.textContent = '× Delete Table';
-            deleteTableBtn.addEventListener('click', () => this.deleteTable(wrapper));
-
-            actions.appendChild(addRowBtn);
-            actions.appendChild(addColBtn);
-            actions.appendChild(moveRowUpBtn);
-            actions.appendChild(moveRowDownBtn);
-            actions.appendChild(moveColLeftBtn);
-            actions.appendChild(moveColRightBtn);
-            actions.appendChild(deleteTableBtn);
         });
     }
 

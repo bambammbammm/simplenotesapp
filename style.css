@@ -1913,6 +1913,33 @@ body.zen-mode .plan-actions {
     border-color: #2ecc71;
 }
 
+/* Table actions divider */
+.table-actions-divider {
+    width: 100%;
+    height: 1px;
+    background: #333;
+    margin: 4px 0;
+}
+
+/* Table action buttons (global, work on focused table) */
+.plan-action-btn.table-action-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    border-color: #333;
+}
+
+.plan-action-btn.table-action-btn:disabled:hover {
+    background: rgba(26, 26, 26, 0.9);
+    border-color: #333;
+    transform: none;
+}
+
+.plan-action-btn.table-delete-btn:not(:disabled):hover {
+    background: rgba(231, 76, 60, 0.1);
+    border-color: #e74c3c;
+    color: #e74c3c;
+}
+
 /* Floating Formatting Toolbar */
 .floating-toolbar {
     position: absolute;
