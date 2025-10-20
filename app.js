@@ -148,6 +148,17 @@ class NotesApp {
         this.lastResetDate = null;
         this.completedCounterElement = document.getElementById('completedCounter');
 
+        // Google Calendar Integration (GIS)
+        this.googleCalendarBtn = document.getElementById('googleCalendarAuth');
+        this.isGoogleSignedIn = false;
+        this.googleCalendarEvents = []; // Store today's events
+        this.GOOGLE_API_KEY = ''; // Will need to be set by user
+        this.GOOGLE_CLIENT_ID = ''; // Will need to be set by user
+        this.DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest';
+        this.SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
+        this.tokenClient = null; // GIS token client
+        this.accessToken = null; // Current access token
+
         // Undo functionality
         this.init();
     }
@@ -5695,9 +5706,25 @@ class NotesApp {
             !note.completed && note.dueDate === todayISO
         );
 
-        if (todaysTasks.length === 0) {
-            this.insertBriefingIntoEditor('📋 Keine Tasks für heute gefunden.\n\nErstelle Tasks mit einem Datum im Task Creator (Cmd+K) oder Calendar View.');
+        if (todaysTasks.length === 0 && (!this.googleCalendarEvents || this.googleCalendarEvents.length === 0)) {
+            this.insertBriefingIntoEditor('📋 Keine Tasks oder Events für heute gefunden.\n\nErstelle Tasks mit einem Datum im Task Creator (Cmd+K) oder Calendar View.');
             return;
+        }
+
+        // Fetch week events for week overview
+        const weekEvents = await this.fetchWeekEvents();
+
+        // Get tasks for next 7 days
+        const next7Days = [];
+        for (let i = 0; i < 7; i++) {
+            const date = new Date(today);
+            date.setDate(date.getDate() + i);
+            const dateISO = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+            next7Days.push({
+                date: dateISO,
+                dateObj: date,
+                tasks: this.notes.filter(note => !note.completed && note.dueDate === dateISO)
+            });
         }
 
         // Format tasks for prompt
@@ -5713,6 +5740,34 @@ class NotesApp {
         }).join('\n');
 
         const totalTime = todaysTasks.reduce((sum, t) => sum + (t.timeMinutes || 0), 0);
+
+        // Get Google Calendar events (today only, exclude Week Numbers)
+        let calendarEventsText = '';
+        if (this.googleCalendarEvents && this.googleCalendarEvents.length > 0) {
+            calendarEventsText = '\n\nKALENDER EVENTS HEUTE (Google Calendar):\n';
+            this.googleCalendarEvents.forEach(event => {
+                // Skip "Week Numbers" calendar
+                if (event._calendarName === 'Week Numbers') return;
+
+                const start = event.start.dateTime || event.start.date;
+                const end = event.end.dateTime || event.end.date;
+
+                // Format time
+                let timeStr = '';
+                if (event.start.dateTime) {
+                    const startTime = new Date(start).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+                    const endTime = new Date(end).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+                    timeStr = `${startTime}-${endTime}`;
+                } else {
+                    timeStr = 'Ganztägig';
+                }
+
+                calendarEventsText += `📅 ${timeStr}: ${event.summary} [${event._calendarName}]\n`;
+                if (event.location) {
+                    calendarEventsText += `   📍 ${event.location}\n`;
+                }
+            });
+        }
 
         // Get available time blocks
         const { blocks, totalMinutes, breaks } = this.getTimeBlocksAndBreaks();
@@ -5772,25 +5827,83 @@ class NotesApp {
             });
         }
 
+        // Build week overview
+        let weekOverviewText = '\n\nWOCHENÜBERBLICK (Nächste 7 Tage):\n';
+        next7Days.forEach((dayData, index) => {
+            // Skip today (index 0)
+            if (index === 0) return;
+
+            const dayName = dayData.dateObj.toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: 'long' });
+            const dayEvents = weekEvents.filter(event => {
+                // Skip "Week Numbers" calendar
+                if (event._calendarName === 'Week Numbers') return false;
+
+                const eventStart = event.start.dateTime || event.start.date;
+                const eventDate = new Date(eventStart);
+                return eventDate.toDateString() === dayData.dateObj.toDateString();
+            });
+
+            const taskCount = dayData.tasks.length;
+            const eventCount = dayEvents.length;
+            const totalMinutes = dayData.tasks.reduce((sum, t) => sum + (t.timeMinutes || 0), 0);
+
+            if (taskCount > 0 || eventCount > 0) {
+                weekOverviewText += `\n**${dayName}:**\n`;
+
+                // List events
+                if (eventCount > 0) {
+                    weekOverviewText += `Kalender Events:\n`;
+                    dayEvents.forEach(event => {
+                        const start = event.start.dateTime || event.start.date;
+                        let timeStr = '';
+                        if (event.start.dateTime) {
+                            timeStr = new Date(start).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) + ' Uhr';
+                        } else {
+                            timeStr = 'Ganztägig';
+                        }
+                        weekOverviewText += `  - ${timeStr}: ${event.summary} (${event._calendarName})\n`;
+                    });
+                }
+
+                // List high-priority tasks
+                const highPriorityTasks = dayData.tasks.filter(t => t.priority === '!!!' || t.priority === '!!');
+                if (highPriorityTasks.length > 0) {
+                    weekOverviewText += `Wichtige Tasks (${highPriorityTasks.length}):\n`;
+                    highPriorityTasks.forEach(task => {
+                        const catMap = { k: 'KSWIL', h: 'HSLU', p: 'Privat', u: 'Unterricht' };
+                        const cat = task.category ? catMap[task.category] : '';
+                        weekOverviewText += `  - ${task.priority} ${task.content} (${task.timeMinutes || 15}min, ${cat})\n`;
+                    });
+                } else if (taskCount > 0) {
+                    weekOverviewText += `Tasks: ${taskCount} Aufgaben (${totalMinutes}min)\n`;
+                }
+            }
+        });
+
         // Build prompt for Ollama (AI only writes nice text, math is done!)
         const prompt = `Erstelle ein motivierendes Tages-Briefing für ${today.toLocaleDateString('de-DE', { weekday: 'long' })}.
 
 DEINE AUFGABE: Schreibe einen schönen Text um den fertigen Zeitplan herum. Das Scheduling wurde bereits mathematisch korrekt berechnet!
 
-${todaysTasks.length} Aufgaben für heute (${totalTime}min)${scheduleText}${warningsText}
+${todaysTasks.length} Aufgaben für heute (${totalTime}min)${calendarEventsText}${scheduleText}${warningsText}${weekOverviewText}
 
 AUSGABE-FORMAT:
 
 ## 🌅 Tages-Briefing - ${today.toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
 
 **Überblick:**
-[Fasse zusammen: Anzahl Tasks, Gesamtzeit, ob alles passt oder Probleme]
+[Fasse zusammen: Anzahl Tasks, Gesamtzeit${this.googleCalendarEvents && this.googleCalendarEvents.length > 0 ? ', Anzahl Kalender-Events' : ''}, ob alles passt oder Probleme]
 
-**Zeitplan:**
-${schedulingResult.scheduled.length > 0 ? '[Kopiere den BERECHNETEN ZEITPLAN oben 1:1 (exakte Zeiten!). Füge kurze Kommentare hinzu.]' : '[Erkläre dass Zeitfenster ausgewählt werden müssen]'}
+${this.googleCalendarEvents && this.googleCalendarEvents.length > 0 ? '**Kalender Events (Google Calendar):**\n[Kopiere NUR die Kalender Events aus "KALENDER EVENTS HEUTE" oben. NICHT die Tasks aus dem Zeitplan! Formatiere als kurze Auflistung mit Uhrzeit und Name.]' : ''}
+
+**Zeitplan (Tasks):**
+${schedulingResult.scheduled.length > 0 ? '[Kopiere den BERECHNETEN ZEITPLAN oben EXAKT 1:1. Jede Zeile einzeln, mit Emoji, Zeit, Name, Kategorie, Priorität und Dauer. Füge KEINE Kommentare hinzu, kopiere nur!]' : '[Erkläre dass Zeitfenster ausgewählt werden müssen]'}
+
+**Wochenausblick:**
+[Schreibe einen Fließtext über die kommende Woche. Erwähne ALLE wichtigen Events aus dem Wochenüberblick mit Tag, Uhrzeit und Namen. Hebe besonders wichtige Termine hervor. Formatiere als zusammenhängenden Text, nicht als Liste.]
 
 **Tipps:**
-[1-2 konkrete Tipps basierend auf Prioritäten und Warnungen]
+[1-2 konkrete Tipps basierend auf Prioritäten${this.googleCalendarEvents && this.googleCalendarEvents.length > 0 ? ', Kalender Events' : ''}, Wochenausblick und Warnungen]
 
 **Motivation:**
 [Ein motivierender Satz]
@@ -5958,6 +6071,9 @@ WICHTIG: Ändere KEINE Zeiten aus dem berechneten Zeitplan! Kopiere sie exakt.`;
         document.getElementById('presetAfternoon').addEventListener('click', () => this.setPreset('afternoon'));
         document.getElementById('presetEvening').addEventListener('click', () => this.setPreset('evening'));
         document.getElementById('presetClearAll').addEventListener('click', () => this.clearAllTimeSlots());
+
+        // Google Calendar button
+        this.googleCalendarBtn.addEventListener('click', () => this.handleGoogleCalendarAuth());
     }
 
     generateTimeSlots() {
@@ -6231,6 +6347,275 @@ WICHTIG: Ändere KEINE Zeiten aus dem berechneten Zeitplan! Kopiere sie exakt.`;
         }
 
         return { scheduled, unscheduled, warnings };
+    }
+
+    // ============================================
+    // GOOGLE CALENDAR INTEGRATION
+    // ============================================
+
+    async initGoogleAPI() {
+        console.log('Initializing Google API (GIS)...');
+
+        // Check if user has set credentials
+        const savedClientId = localStorage.getItem('googleClientId');
+        const savedApiKey = localStorage.getItem('googleApiKey');
+
+        if (!savedClientId || !savedApiKey) {
+            alert('Bitte zuerst Google API Credentials eingeben!\n\nDu brauchst:\n1. Client ID (OAuth 2.0)\n2. API Key\n\nGehe zu: https://console.cloud.google.com/apis/credentials');
+
+            // Prompt for credentials
+            const clientId = prompt('Google Client ID:');
+            const apiKey = prompt('Google API Key:');
+
+            if (clientId && apiKey) {
+                localStorage.setItem('googleClientId', clientId);
+                localStorage.setItem('googleApiKey', apiKey);
+                this.GOOGLE_CLIENT_ID = clientId;
+                this.GOOGLE_API_KEY = apiKey;
+            } else {
+                console.error('No credentials provided');
+                return;
+            }
+        } else {
+            this.GOOGLE_CLIENT_ID = savedClientId;
+            this.GOOGLE_API_KEY = savedApiKey;
+        }
+
+        try {
+            // Load the gapi client library
+            await new Promise((resolve, reject) => {
+                gapi.load('client', { callback: resolve, onerror: reject });
+            });
+
+            // Initialize gapi client (for API calls)
+            await gapi.client.init({
+                apiKey: this.GOOGLE_API_KEY,
+                discoveryDocs: [this.DISCOVERY_DOC]
+            });
+
+            // Initialize GIS token client (for OAuth)
+            this.tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: this.GOOGLE_CLIENT_ID,
+                scope: this.SCOPES,
+                callback: (response) => {
+                    if (response.error) {
+                        console.error('Token error:', response);
+                        alert('Fehler bei der Authentifizierung: ' + response.error);
+                        return;
+                    }
+                    // Token received successfully
+                    this.accessToken = response.access_token;
+                    this.updateSignInStatus(true);
+                    console.log('Access token received');
+                }
+            });
+
+            console.log('Google API (GIS) initialized successfully');
+        } catch (error) {
+            console.error('Error initializing Google API:', error);
+            alert('Fehler beim Initialisieren der Google API. Bitte Credentials überprüfen.');
+        }
+    }
+
+    async handleGoogleCalendarAuth() {
+        console.log('Handling Google Calendar auth (GIS)...');
+
+        // If not initialized yet, initialize first
+        if (!this.tokenClient) {
+            await this.initGoogleAPI();
+            // Don't auto-trigger - user needs to click again
+            alert('Google API initialisiert! Bitte klicke nochmal auf den Button um dich anzumelden.');
+            return;
+        }
+
+        if (this.isGoogleSignedIn) {
+            // Sign out (revoke token)
+            if (this.accessToken) {
+                google.accounts.oauth2.revoke(this.accessToken, () => {
+                    console.log('Token revoked');
+                });
+            }
+            this.accessToken = null;
+            this.updateSignInStatus(false);
+            console.log('Signed out from Google Calendar');
+        } else {
+            // Request access token (triggers OAuth popup)
+            // Must be called directly from user action, not setTimeout!
+            this.tokenClient.requestAccessToken({ prompt: 'consent' });
+        }
+    }
+
+    updateSignInStatus(isSignedIn) {
+        this.isGoogleSignedIn = isSignedIn;
+
+        // Update button text
+        if (isSignedIn) {
+            this.googleCalendarBtn.textContent = '✓ Google Calendar verbunden';
+            this.googleCalendarBtn.style.background = '#34a853'; // Green
+
+            // Fetch today's events
+            this.fetchTodaysEvents();
+        } else {
+            this.googleCalendarBtn.textContent = '📅 Google Calendar verbinden';
+            this.googleCalendarBtn.style.background = '#4285f4'; // Blue
+            this.googleCalendarEvents = [];
+        }
+    }
+
+    async fetchWeekEvents() {
+        console.log('Fetching events for next 7 days from all calendars...');
+
+        if (!this.accessToken) {
+            console.error('No access token available');
+            return [];
+        }
+
+        try {
+            // Set the access token for gapi client
+            gapi.client.setToken({ access_token: this.accessToken });
+
+            // Get date range for next 7 days
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const weekStart = today.toISOString();
+
+            const weekEnd = new Date(today);
+            weekEnd.setDate(weekEnd.getDate() + 7);
+            weekEnd.setHours(23, 59, 59, 999);
+            const weekEndISO = weekEnd.toISOString();
+
+            // Get all calendars
+            const calendarListResponse = await gapi.client.calendar.calendarList.list();
+            const calendars = calendarListResponse.result.items || [];
+
+            // Fetch events from ALL calendars
+            const allEventsPromises = calendars.map(calendar =>
+                gapi.client.calendar.events.list({
+                    calendarId: calendar.id,
+                    timeMin: weekStart,
+                    timeMax: weekEndISO,
+                    showDeleted: false,
+                    singleEvents: true,
+                    maxResults: 100,
+                    orderBy: 'startTime'
+                }).then(response => ({
+                    calendarName: calendar.summary,
+                    events: response.result.items || []
+                })).catch(error => {
+                    console.warn(`Error fetching from ${calendar.summary}:`, error);
+                    return { calendarName: calendar.summary, events: [] };
+                })
+            );
+
+            const allCalendarEvents = await Promise.all(allEventsPromises);
+
+            // Combine all events
+            let allEvents = [];
+            allCalendarEvents.forEach(calendarData => {
+                calendarData.events.forEach(event => {
+                    event._calendarName = calendarData.calendarName;
+                });
+                allEvents = allEvents.concat(calendarData.events);
+            });
+
+            // Sort by start time
+            allEvents.sort((a, b) => {
+                const startA = a.start.dateTime || a.start.date;
+                const startB = b.start.dateTime || b.start.date;
+                return new Date(startA) - new Date(startB);
+            });
+
+            console.log(`Fetched ${allEvents.length} events for next 7 days`);
+            return allEvents;
+
+        } catch (error) {
+            console.error('Error fetching week events:', error);
+            return [];
+        }
+    }
+
+    async fetchTodaysEvents() {
+        console.log('Fetching today\'s events from all calendars...');
+
+        if (!this.accessToken) {
+            console.error('No access token available');
+            return;
+        }
+
+        try {
+            // Set the access token for gapi client
+            gapi.client.setToken({ access_token: this.accessToken });
+
+            // Get today's date range
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const todayStart = today.toISOString();
+
+            const todayEnd = new Date(today);
+            todayEnd.setHours(23, 59, 59, 999);
+            const todayEndISO = todayEnd.toISOString();
+
+            // First, get all calendars
+            const calendarListResponse = await gapi.client.calendar.calendarList.list();
+            const calendars = calendarListResponse.result.items || [];
+
+            console.log(`Found ${calendars.length} calendars:`, calendars.map(c => c.summary));
+
+            // Fetch events from ALL calendars
+            const allEventsPromises = calendars.map(calendar =>
+                gapi.client.calendar.events.list({
+                    calendarId: calendar.id,
+                    timeMin: todayStart,
+                    timeMax: todayEndISO,
+                    showDeleted: false,
+                    singleEvents: true,
+                    maxResults: 50,
+                    orderBy: 'startTime'
+                }).then(response => ({
+                    calendarName: calendar.summary,
+                    events: response.result.items || []
+                })).catch(error => {
+                    console.warn(`Error fetching from ${calendar.summary}:`, error);
+                    return { calendarName: calendar.summary, events: [] };
+                })
+            );
+
+            const allCalendarEvents = await Promise.all(allEventsPromises);
+
+            // Combine all events from all calendars
+            let allEvents = [];
+            allCalendarEvents.forEach(calendarData => {
+                if (calendarData.events.length > 0) {
+                    console.log(`${calendarData.calendarName}: ${calendarData.events.length} events`);
+                    // Add calendar name to each event
+                    calendarData.events.forEach(event => {
+                        event._calendarName = calendarData.calendarName;
+                    });
+                    allEvents = allEvents.concat(calendarData.events);
+                }
+            });
+
+            // Sort by start time
+            allEvents.sort((a, b) => {
+                const startA = a.start.dateTime || a.start.date;
+                const startB = b.start.dateTime || b.start.date;
+                return new Date(startA) - new Date(startB);
+            });
+
+            this.googleCalendarEvents = allEvents;
+
+            console.log(`Total: Fetched ${allEvents.length} events for today from all calendars`);
+
+            // Log events for debugging
+            allEvents.forEach(event => {
+                const start = event.start.dateTime || event.start.date;
+                console.log(`📅 [${event._calendarName}] ${event.summary} at ${start}`);
+            });
+
+        } catch (error) {
+            console.error('Error fetching calendar events:', error);
+            alert('Fehler beim Laden der Kalender-Events.');
+        }
     }
 
 }

@@ -8,8 +8,8 @@
     <title>Simple Notes App</title>
     <link rel="icon" type="image/png" href="icon-192.png">
     <link rel="apple-touch-icon" href="icon-192.png">
-    <link rel="manifest" href="manifest.json?v=110">
-    <link rel="stylesheet" href="style.css?v=110">
+    <link rel="manifest" href="manifest.json?v=112">
+    <link rel="stylesheet" href="style.css?v=112">
 </head>
 <body>
     <div class="app-container">
@@ -239,6 +239,9 @@
                             <button class="time-preset-btn" id="presetAfternoon">Nachmittag (13:00-18:00)</button>
                             <button class="time-preset-btn" id="presetEvening">Abend (18:30-24:00)</button>
                             <button class="time-preset-btn" id="presetClearAll">Alle löschen</button>
+                            <button class="time-preset-btn google-calendar-btn" id="googleCalendarAuth" style="background: #4285f4; color: white;">
+                                📅 Google Calendar verbinden
+                            </button>
                         </div>
                         <!-- Time Slots Grid -->
                         <div class="time-slots-grid" id="timeSlotsGrid">
@@ -497,9 +500,13 @@ Tipp: Schreiben Sie (Task-Name 30m --k) um automatisch eine Aufgabe zu erstellen
         </div>
     </div>
 
-    <script src="app.js?v=110"></script>
-    <script src="ui-redesign.js?v=110"></script>
-    <script src="task-creator.js?v=110"></script>
+    <!-- Google API Client Library (New GIS) -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://apis.google.com/js/api.js"></script>
+
+    <script src="app.js?v=112"></script>
+    <script src="ui-redesign.js?v=112"></script>
+    <script src="task-creator.js?v=112"></script>
     <script>
         // Register Service Worker for PWA
         if ('serviceWorker' in navigator) {
