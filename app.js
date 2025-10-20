@@ -5,7 +5,7 @@ class NotesApp {
         this.stackViewActive = false; // Stack View mode (show all stacks expanded)
         this.noteInput = document.getElementById('noteInput');
         this.notesCanvas = document.getElementById('notesCanvas');
-        this.kanbanView = document.getElementById('kanbanView');
+        this.calendarView = document.getElementById('calendarView');
         this.planView = document.getElementById('planView');
         this.planEditor = document.getElementById('planEditor');
         this.welcomeMessage = document.getElementById('welcomeMessage');
@@ -14,16 +14,29 @@ class NotesApp {
         this.draggedCard = null;
         this.draggedStack = null;
         this.currentStackId = null;
-        this.currentView = 'board'; // 'board', 'kanban' or 'plan'
+        this.currentView = 'board'; // 'board', 'calendar' or 'plan'
         this.viewSwitchBtn = document.getElementById('viewSwitchBtn');
         this.planText = ''; // Store plan text
-        this.unassignedCollapsed = false; // State for collapsed unassigned column
-        this.collapseUnassignedBtn = document.getElementById('collapseUnassignedBtn');
         this.planInputDebounceTimer = null; // Debounce timer for plan input parsing
         this.newlyCreatedNoteIds = new Set(); // Track newly created notes for animation
         this.undoStack = []; // Stack of actions for undo functionality
         this.maxUndoStack = 10; // Maximum undo history
         this.currentFocusedTable = null; // Currently focused table for global table actions
+
+        // Calendar state
+        const today = new Date();
+        this.currentMonth = today.getMonth(); // 0-11
+        this.currentYear = today.getFullYear();
+
+        // Calendar DOM elements
+        this.calendarGrid = document.getElementById('calendarGrid');
+        this.calendarBacklogBody = document.getElementById('calendarBacklogBody');
+        this.calendarMonthTitle = document.getElementById('calendarMonthTitle');
+        this.calendarPrevBtn = document.getElementById('calendarPrevBtn');
+        this.calendarNextBtn = document.getElementById('calendarNextBtn');
+        this.calendarTodayBtn = document.getElementById('calendarTodayBtn');
+        this.backlogCount = document.getElementById('backlogCount');
+        this.backlogTime = document.getElementById('backlogTime');
 
         // Saved Notes
         this.savedNotes = [];
@@ -215,8 +228,10 @@ class NotesApp {
             }
         });
 
-        // Collapse unassigned column button
-        this.collapseUnassignedBtn.addEventListener('click', () => this.toggleUnassignedCollapse());
+        // Calendar navigation buttons
+        this.calendarPrevBtn.addEventListener('click', () => this.navigateCalendar(-1));
+        this.calendarNextBtn.addEventListener('click', () => this.navigateCalendar(1));
+        this.calendarTodayBtn.addEventListener('click', () => this.goToToday());
 
         // Hamburger menu
         this.hamburgerMenuBtn.addEventListener('click', (e) => {
@@ -1013,21 +1028,50 @@ class NotesApp {
             if (!matchesPriority) return false;
         }
 
-        // Check day filters
+        // Check day filters (diese Woche)
         const dayFilters = ['day-unassigned', 'day-monday', 'day-tuesday', 'day-wednesday', 'day-thursday', 'day-friday', 'day-saturday', 'day-sunday'];
         const activeDayFilters = dayFilters.filter(f => this.activeFilters.has(f));
 
         if (activeDayFilters.length > 0) {
             const matchesDay = activeDayFilters.some(filter => {
                 const day = filter.split('-')[1];
-                if (day === 'unassigned') return !note.assignedDay;
-                return note.assignedDay === day;
+                if (day === 'unassigned') return !note.dueDate;
+
+                // Calculate date for this weekday (this week)
+                const targetDate = this.getDateForWeekday(day);
+                return note.dueDate === targetDate;
             });
 
             if (!matchesDay) return false;
         }
 
         return true;
+    }
+
+    getDateForWeekday(weekday) {
+        // Convert weekday name to ISO date string (YYYY-MM-DD) for this week
+        const dayMap = {
+            monday: 1, tuesday: 2, wednesday: 3, thursday: 4,
+            friday: 5, saturday: 6, sunday: 0
+        };
+
+        const targetDay = dayMap[weekday];
+        const today = new Date();
+        const currentDay = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+
+        // Calculate difference (0 = Sunday to Monday = 1 day forward)
+        let diff = targetDay - currentDay;
+
+        // If target is Sunday (0) and we're past Monday, go to next Sunday
+        if (targetDay === 0 && currentDay !== 0) {
+            diff = 7 - currentDay;
+        }
+
+        const targetDate = new Date(today);
+        targetDate.setDate(today.getDate() + diff);
+
+        // Return ISO format YYYY-MM-DD
+        return `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}-${String(targetDate.getDate()).padStart(2, '0')}`;
     }
 
     getFilteredNotes() {
@@ -1246,6 +1290,28 @@ class NotesApp {
         if (savedStacks) {
             this.stacks = JSON.parse(savedStacks);
         }
+
+        // Migration: assignedDay → dueDate (v103)
+        this.migrateAssignedDayToDueDate();
+    }
+
+    migrateAssignedDayToDueDate() {
+        // Migrate old notes with assignedDay to new dueDate system
+        let migrated = false;
+
+        this.notes.forEach(note => {
+            if (note.assignedDay) {
+                // Map old weekday to date of this week
+                note.dueDate = this.getDateForWeekday(note.assignedDay);
+                delete note.assignedDay;
+                migrated = true;
+            }
+        });
+
+        if (migrated) {
+            console.log('Migrated notes from assignedDay to dueDate');
+            this.saveNotes();
+        }
     }
 
     saveStacks() {
@@ -1341,6 +1407,7 @@ class NotesApp {
         this.draggedCard = noteId;
         e.target.classList.add('dragging');
         e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', noteId);
     }
 
     handleDragEnd(e) {
@@ -1401,8 +1468,8 @@ class NotesApp {
 
 
     render() {
-        if (this.currentView === 'kanban') {
-            this.renderKanban();
+        if (this.currentView === 'calendar') {
+            this.renderCalendar();
         } else {
             this.renderBoard();
         }
@@ -1423,10 +1490,10 @@ class NotesApp {
             }
         }
 
-        // Cycle through: board → kanban → plan → board
+        // Cycle through: board → calendar → plan → board
         if (this.currentView === 'board') {
-            this.currentView = 'kanban';
-        } else if (this.currentView === 'kanban') {
+            this.currentView = 'calendar';
+        } else if (this.currentView === 'calendar') {
             this.currentView = 'plan';
         } else {
             this.currentView = 'board';
@@ -1434,12 +1501,12 @@ class NotesApp {
 
         // Hide all views
         this.notesCanvas.style.display = 'none';
-        this.kanbanView.style.display = 'none';
+        this.calendarView.style.display = 'none';
         this.planView.style.display = 'none';
 
         // Show current view and update button
-        if (this.currentView === 'kanban') {
-            this.kanbanView.style.display = 'flex';
+        if (this.currentView === 'calendar') {
+            this.calendarView.style.display = 'flex';
             this.viewSwitchBtn.querySelector('.view-icon').textContent = '✎';
             this.viewSwitchBtn.querySelector('.view-label').textContent = 'Plan';
             document.body.classList.remove('zen-mode'); // Remove zen mode
@@ -1453,14 +1520,14 @@ class NotesApp {
         } else {
             this.notesCanvas.style.display = 'grid';
             this.viewSwitchBtn.querySelector('.view-icon').textContent = '⊞';
-            this.viewSwitchBtn.querySelector('.view-label').textContent = 'Kanban';
+            this.viewSwitchBtn.querySelector('.view-label').textContent = 'Kalender';
             document.body.classList.remove('zen-mode'); // Remove zen mode
         }
 
         this.render();
 
-        // Trigger animation cleanup for newly created notes when switching to board/kanban view
-        if (this.currentView === 'board' || this.currentView === 'kanban') {
+        // Trigger animation cleanup for newly created notes when switching to board/calendar view
+        if (this.currentView === 'board' || this.currentView === 'calendar') {
             if (this.newlyCreatedNoteIds.size > 0) {
                 console.log('Starting animation timer for', this.newlyCreatedNoteIds.size, 'notes in', this.currentView, 'view');
                 // After animation completes (1s), remove IDs from tracking set
@@ -1508,12 +1575,12 @@ class NotesApp {
 
         // Hide all views
         this.notesCanvas.style.display = 'none';
-        this.kanbanView.style.display = 'none';
+        this.calendarView.style.display = 'none';
         this.planView.style.display = 'none';
 
         // Show current view and update button
-        if (this.currentView === 'kanban') {
-            this.kanbanView.style.display = 'flex';
+        if (this.currentView === 'calendar') {
+            this.calendarView.style.display = 'flex';
             this.viewSwitchBtn.querySelector('.view-icon').textContent = '✎';
             this.viewSwitchBtn.querySelector('.view-label').textContent = 'Plan';
             document.body.classList.remove('zen-mode'); // Remove zen mode
@@ -1526,14 +1593,14 @@ class NotesApp {
         } else {
             this.notesCanvas.style.display = 'grid';
             this.viewSwitchBtn.querySelector('.view-icon').textContent = '⊞';
-            this.viewSwitchBtn.querySelector('.view-label').textContent = 'Kanban';
+            this.viewSwitchBtn.querySelector('.view-label').textContent = 'Kalender';
             document.body.classList.remove('zen-mode'); // Remove zen mode
         }
 
         this.render();
 
-        // Trigger animation cleanup for newly created notes when switching to board/kanban view
-        if (this.currentView === 'board' || this.currentView === 'kanban') {
+        // Trigger animation cleanup for newly created notes when switching to board/calendar view
+        if (this.currentView === 'board' || this.currentView === 'calendar') {
             if (this.newlyCreatedNoteIds.size > 0) {
                 console.log('Starting animation timer for', this.newlyCreatedNoteIds.size, 'notes in', this.currentView, 'view');
                 // After animation completes (1s), remove IDs from tracking set
@@ -1867,6 +1934,242 @@ class NotesApp {
 
     }
 
+    // Calendar View Functions
+
+    renderCalendar() {
+        // Update time statistics
+        this.updateTimeStats();
+        this.updateWorkSidebar();
+
+        // Update month title
+        const monthNames = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
+            'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+        this.calendarMonthTitle.textContent = `${monthNames[this.currentMonth]} ${this.currentYear}`;
+
+        // Generate calendar grid
+        this.generateCalendarGrid();
+
+        // Render backlog (notes without dueDate)
+        this.renderBacklog();
+
+        // Render tasks in calendar cells
+        this.renderCalendarTasks();
+    }
+
+    generateCalendarGrid() {
+        // Clear existing cells
+        this.calendarGrid.innerHTML = '';
+
+        // Get first day of month (0 = Sunday, 1 = Monday, etc.)
+        const firstDay = new Date(this.currentYear, this.currentMonth, 1);
+        let firstDayOfWeek = firstDay.getDay();
+        // Convert Sunday (0) to 7, so Monday is 1
+        firstDayOfWeek = firstDayOfWeek === 0 ? 7 : firstDayOfWeek;
+
+        // Get number of days in month
+        const daysInMonth = new Date(this.currentYear, this.currentMonth + 1, 0).getDate();
+
+        // Get days from previous month to fill first week
+        const daysFromPrevMonth = firstDayOfWeek - 1;
+        const prevMonth = this.currentMonth === 0 ? 11 : this.currentMonth - 1;
+        const prevMonthYear = this.currentMonth === 0 ? this.currentYear - 1 : this.currentYear;
+        const daysInPrevMonth = new Date(prevMonthYear, prevMonth + 1, 0).getDate();
+
+        // Calculate total cells needed (must be multiple of 7)
+        const totalCells = Math.ceil((daysFromPrevMonth + daysInMonth) / 7) * 7;
+
+        // Generate cells
+        for (let i = 0; i < totalCells; i++) {
+            const cell = document.createElement('div');
+            cell.className = 'calendar-cell';
+
+            let day, month, year, isOtherMonth = false;
+
+            if (i < daysFromPrevMonth) {
+                // Previous month
+                day = daysInPrevMonth - daysFromPrevMonth + i + 1;
+                month = prevMonth;
+                year = prevMonthYear;
+                isOtherMonth = true;
+            } else if (i < daysFromPrevMonth + daysInMonth) {
+                // Current month
+                day = i - daysFromPrevMonth + 1;
+                month = this.currentMonth;
+                year = this.currentYear;
+            } else {
+                // Next month
+                day = i - daysFromPrevMonth - daysInMonth + 1;
+                month = this.currentMonth === 11 ? 0 : this.currentMonth + 1;
+                year = this.currentMonth === 11 ? this.currentYear + 1 : this.currentYear;
+                isOtherMonth = true;
+            }
+
+            // Create ISO date string (YYYY-MM-DD)
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            cell.dataset.date = dateStr;
+
+            // Check if today
+            const today = new Date();
+            const isToday = day === today.getDate() &&
+                           month === today.getMonth() &&
+                           year === today.getFullYear();
+
+            // Check if past
+            const cellDate = new Date(year, month, day);
+            const isPast = cellDate < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+            // Apply classes
+            if (isToday) cell.classList.add('today');
+            if (isPast && !isToday) cell.classList.add('past');
+            if (isOtherMonth) cell.classList.add('other-month');
+
+            // Date header
+            const dateHeader = document.createElement('div');
+            dateHeader.className = 'calendar-cell-date';
+            dateHeader.textContent = day;
+            cell.appendChild(dateHeader);
+
+            // Tasks container
+            const tasksContainer = document.createElement('div');
+            tasksContainer.className = 'calendar-cell-tasks';
+            cell.appendChild(tasksContainer);
+
+            // Add drag & drop listeners
+            cell.addEventListener('dragover', (e) => this.handleCalendarDragOver(e));
+            cell.addEventListener('dragenter', (e) => this.handleCalendarDragEnter(e, dateStr));
+            cell.addEventListener('dragleave', (e) => this.handleCalendarDragLeave(e));
+            cell.addEventListener('drop', (e) => this.handleCalendarDrop(e, dateStr));
+
+            this.calendarGrid.appendChild(cell);
+        }
+    }
+
+    renderBacklog() {
+        // Clear backlog
+        this.calendarBacklogBody.innerHTML = '';
+
+        // Get notes without dueDate
+        const backlogNotes = this.notes.filter(note => !note.dueDate);
+
+        // Update count and time
+        this.backlogCount.textContent = backlogNotes.length;
+        const totalTime = backlogNotes.reduce((sum, note) => sum + (note.timeMinutes || 0), 0);
+        this.backlogTime.textContent = totalTime > 0 ? `${totalTime}m` : '0m';
+
+        // Render notes (isKanban=true prevents stacking, isCalendar=true for minimal display)
+        backlogNotes.forEach(note => {
+            const noteCard = this.createNoteCard(note, null, 1, null, null, true, true);
+            this.calendarBacklogBody.appendChild(noteCard);
+        });
+
+        // Add drag & drop to backlog body
+        if (!this.calendarBacklogBody._calendarListenersAdded) {
+            this.calendarBacklogBody.addEventListener('dragover', (e) => this.handleCalendarDragOver(e));
+            this.calendarBacklogBody.addEventListener('dragenter', (e) => this.handleCalendarDragEnter(e, null));
+            this.calendarBacklogBody.addEventListener('dragleave', (e) => this.handleCalendarDragLeave(e));
+            this.calendarBacklogBody.addEventListener('drop', (e) => this.handleCalendarDrop(e, null));
+            this.calendarBacklogBody._calendarListenersAdded = true;
+        }
+    }
+
+    renderCalendarTasks() {
+        // Get all calendar cells
+        const cells = this.calendarGrid.querySelectorAll('.calendar-cell');
+
+        cells.forEach(cell => {
+            const dateStr = cell.dataset.date;
+            const tasksContainer = cell.querySelector('.calendar-cell-tasks');
+
+            // Get notes for this date
+            const dayNotes = this.notes.filter(note => note.dueDate === dateStr);
+
+            // Render notes (isKanban=true prevents stacking, isCalendar=true for minimal display)
+            dayNotes.forEach(note => {
+                const noteCard = this.createNoteCard(note, null, 1, null, null, true, true);
+                tasksContainer.appendChild(noteCard);
+            });
+        });
+    }
+
+    navigateCalendar(direction) {
+        // direction: -1 for prev, +1 for next
+        this.currentMonth += direction;
+
+        if (this.currentMonth < 0) {
+            this.currentMonth = 11;
+            this.currentYear--;
+        } else if (this.currentMonth > 11) {
+            this.currentMonth = 0;
+            this.currentYear++;
+        }
+
+        this.renderCalendar();
+    }
+
+    goToToday() {
+        const today = new Date();
+        this.currentMonth = today.getMonth();
+        this.currentYear = today.getFullYear();
+        this.renderCalendar();
+    }
+
+    // Calendar Drag & Drop Handlers
+
+    handleCalendarDragOver(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+    }
+
+    handleCalendarDragEnter(e, dateStr) {
+        e.preventDefault();
+        const target = e.currentTarget;
+        if (target.classList.contains('calendar-cell') || target.classList.contains('calendar-backlog-body')) {
+            target.classList.add('drag-over');
+        }
+    }
+
+    handleCalendarDragLeave(e) {
+        const target = e.currentTarget;
+        if (target.classList.contains('calendar-cell') || target.classList.contains('calendar-backlog-body')) {
+            // Only remove if actually leaving the element
+            if (!target.contains(e.relatedTarget)) {
+                target.classList.remove('drag-over');
+            }
+        }
+    }
+
+    handleCalendarDrop(e, dateStr) {
+        e.preventDefault();
+        const target = e.currentTarget;
+
+        // Remove drag-over class from all cells and backlog
+        const cells = this.calendarGrid.querySelectorAll('.calendar-cell');
+        cells.forEach(cell => cell.classList.remove('drag-over'));
+        this.calendarBacklogBody.classList.remove('drag-over');
+
+        // Get dragged note ID
+        const noteId = parseFloat(e.dataTransfer.getData('text/plain'));
+        console.log('Calendar Drop - noteId:', noteId, 'dateStr:', dateStr);
+
+        const note = this.notes.find(n => n.id === noteId);
+
+        if (!note) {
+            console.log('Note not found!');
+            return;
+        }
+
+        console.log('Moving note from', note.dueDate, 'to', dateStr);
+
+        // Update dueDate (null for backlog, ISO string for calendar cell)
+        note.dueDate = dateStr;
+
+        // Remove old assignedDay field (migration)
+        delete note.assignedDay;
+
+        this.saveNotes();
+        this.renderCalendar();
+    }
+
     getFilteredNotesForKanban() {
         // Same as getFilteredNotes but excludes day filters
         if (this.activeFilters.size === 0) {
@@ -2192,9 +2495,33 @@ class NotesApp {
         return container;
     }
 
-    createNoteCard(note, stackIndex = null, totalInStack = 1, stackTotalTime = null, stackTitle = null, isKanban = false) {
+    createNoteCard(note, stackIndex = null, totalInStack = 1, stackTotalTime = null, stackTitle = null, isKanban = false, isCalendar = false) {
         const card = document.createElement('div');
         card.className = 'note-card';
+
+        // Calendar view: minimal display
+        if (isCalendar) {
+            card.classList.add('note-card-calendar');
+            card.dataset.noteId = note.id;
+
+            if (note.category) {
+                card.dataset.category = note.category;
+            }
+
+            // Make draggable
+            card.draggable = true;
+            card.addEventListener('dragstart', (e) => this.handleDragStart(e, note.id));
+            card.addEventListener('dragend', (e) => this.handleDragEnd(e));
+
+            // Only content, no buttons
+            const content = document.createElement('div');
+            content.className = 'note-content';
+            content.textContent = note.content;
+            card.appendChild(content);
+
+            return card;
+        }
+
         if (note.completed) {
             card.classList.add('completed');
         }
@@ -2306,9 +2633,24 @@ class NotesApp {
             timeDisplay.textContent = `${note.timeMinutes}m`;
         }
 
-        // Right side (complete + edit menu)
+        // Right side (unstack + complete + edit menu)
         const rightActions = document.createElement('div');
         rightActions.className = 'note-actions-right';
+
+        // Unstack button (only if card is in a stack)
+        if (note.stackId) {
+            const unstackBtn = document.createElement('button');
+            unstackBtn.className = 'note-unstack';
+            unstackBtn.innerHTML = '&#8690;'; // ⇢ Arrow
+            unstackBtn.title = 'Aus Stack entfernen';
+            unstackBtn.draggable = false;
+            unstackBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                this.unstackNote(note.id);
+            });
+            rightActions.appendChild(unstackBtn);
+        }
 
         const completeBtn = document.createElement('button');
         completeBtn.className = 'note-complete';
@@ -2581,11 +2923,17 @@ class NotesApp {
         this.saveNotes();
         this.saveStacks();
 
-        // Refresh modal or close if stack is gone
-        if (stack.noteIds.length === 0) {
-            this.closeStackModal();
+        // Refresh the current view
+        if (this.currentStackId) {
+            // If called from modal, refresh modal
+            if (stack.noteIds.length === 0) {
+                this.closeStackModal();
+            } else {
+                this.openStackModal(stackId);
+            }
         } else {
-            this.openStackModal(stackId);
+            // If called from board view, re-render board
+            this.renderBoard();
         }
     }
 
@@ -4946,12 +5294,12 @@ class NotesApp {
                 condition: () => this.currentView !== 'board'
             },
             {
-                id: 'view-kanban',
-                title: 'Wechsle zu Kanban View',
-                description: 'Wochenplanung mit Spalten',
+                id: 'view-calendar',
+                title: 'Wechsle zu Kalender View',
+                description: 'Monatsübersicht mit Deadlines',
                 icon: '⊞',
-                action: () => this.switchToView('kanban'),
-                condition: () => this.currentView !== 'kanban'
+                action: () => this.switchToView('calendar'),
+                condition: () => this.currentView !== 'calendar'
             },
             {
                 id: 'view-plan',

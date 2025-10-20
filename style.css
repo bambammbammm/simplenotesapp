@@ -1502,117 +1502,38 @@ body {
     position: relative; /* For absolute positioned cards */
 }
 
-/* Kanban View */
-.kanban-view {
+/* Calendar View (formerly Kanban) */
+.calendar-view {
     flex: 1;
-    overflow-x: auto;
-    overflow-y: hidden;
+    overflow: hidden;
     padding: 24px;
     display: flex;
-    gap: 16px;
+    gap: 20px;
 }
 
-.kanban-column {
-    min-width: 300px;
+/* Backlog Column (Left Side) */
+.calendar-backlog {
+    width: 320px;
+    min-width: 320px;
     background-color: #1a1a1a;
-    border: 1px solid #333;
+    border: 1px dashed #333;
     border-radius: 8px;
     display: flex;
     flex-direction: column;
-    height: calc(100vh - 300px);
-    transition: min-width 0.3s ease, max-width 0.3s ease;
+    overflow: hidden;
 }
 
-.kanban-column[data-day="unassigned"] {
-    background-color: transparent;
-    border-style: dashed;
-}
-
-.kanban-column.collapsed {
-    min-width: 60px;
-    max-width: 60px;
-}
-
-.kanban-column.collapsed .kanban-column-header h3 {
-    writing-mode: vertical-rl;
-    transform: rotate(180deg);
-    white-space: nowrap;
-    margin: 8px 0;
-}
-
-.kanban-column.collapsed .kanban-header-actions {
-    flex-direction: column;
-}
-
-.kanban-column.collapsed .kanban-time-total {
-    display: none;
-}
-
-.kanban-column.collapsed .kanban-column-body {
-    display: none;
-}
-
-.kanban-column-header {
+.calendar-backlog-header {
     padding: 16px;
     border-bottom: 1px solid #333;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
     background-image: repeating-linear-gradient(90deg, #2a2a2a 0px, #2a2a2a 8px, transparent 8px, transparent 14px);
     background-size: 100% 2px;
     background-position: 0 100%;
     background-repeat: no-repeat;
 }
 
-.kanban-header-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.kanban-header-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.kanban-collapse-btn {
-    background: none;
-    border: 1px solid #444;
-    border-radius: 4px;
-    color: #888;
-    font-size: 14px;
-    padding: 0;
-    width: 32px;
-    height: 18px;
-    cursor: pointer;
-    transition: all 0.2s;
-    line-height: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 4px auto 0 auto; /* Centered horizontally with small top margin */
-}
-
-.kanban-collapse-btn:hover {
-    background-color: #2a2a2a;
-    color: #e0e0e0;
-    border-color: #666;
-}
-
-.kanban-collapse-btn .collapse-icon {
-    display: inline-block;
-    transition: transform 0.2s;
-    transform: rotate(-90deg); /* Point downward by default (‹ rotated) */
-}
-
-/* When collapsed, point to the right */
-.kanban-column.collapsed .kanban-collapse-btn .collapse-icon {
-    transform: rotate(0deg);
-}
-
-.kanban-column-header h3 {
-    margin: 0;
+.calendar-backlog-header h3 {
+    margin: 0 0 8px 0;
     font-size: 13px;
     font-weight: 600;
     color: #e0e0e0;
@@ -1620,7 +1541,13 @@ body {
     letter-spacing: 0.5px;
 }
 
-.kanban-count {
+.backlog-stats {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.backlog-count {
     font-size: 11px;
     color: #666;
     background-color: #0f0f0f;
@@ -1628,14 +1555,13 @@ body {
     border-radius: 12px;
 }
 
-.kanban-time-total {
-    font-size: 16px;
+.backlog-time {
+    font-size: 13px;
     font-weight: 600;
     color: #888;
-    text-align: center;
 }
 
-.kanban-column-body {
+.calendar-backlog-body {
     flex: 1;
     overflow-y: auto;
     padding: 16px;
@@ -1644,34 +1570,8 @@ body {
     gap: 12px;
 }
 
-.kanban-column-body .note-card {
-    width: 100%;
-    min-height: 100px;
-}
-
-.kanban-column-body .stack-container {
-    position: relative;
-    width: 100%;
-    min-height: 180px;
-}
-
-.kanban-column-body .stack-container .note-card {
-    position: absolute;
-    width: 100%;
-}
-
-.kanban-column-body .stack-container .note-card.stacked {
-    transform: translateY(calc(var(--stack-index) * 8px));
-    z-index: var(--stack-index);
-}
-
-.kanban-column-body .stack-container .note-card.stacked:hover {
-    transform: translateY(calc(var(--stack-index) * 8px)) scale(1.02);
-    z-index: 100;
-}
-
-.kanban-column-body:empty::after {
-    content: 'Leer';
+.calendar-backlog-body:empty::after {
+    content: 'Keine Tasks';
     display: block;
     text-align: center;
     color: #444;
@@ -1679,9 +1579,223 @@ body {
     padding: 40px 20px;
 }
 
-.kanban-column.drag-over-column {
+.calendar-backlog-body .note-card {
+    width: 100%;
+}
+
+.calendar-backlog-body.drag-over {
     background-color: #252525;
-    border-color: #555;
+    border: 2px dashed #555;
+}
+
+/* Calendar Container (Right Side) */
+.calendar-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Calendar Navigation */
+.calendar-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    padding: 0 4px;
+}
+
+.calendar-nav-btn {
+    background: none;
+    border: 1px solid #444;
+    border-radius: 4px;
+    color: #888;
+    font-size: 24px;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.calendar-nav-btn:hover {
+    background-color: #2a2a2a;
+    color: #e0e0e0;
+    border-color: #666;
+}
+
+.calendar-nav-center {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.calendar-month-title {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: #e0e0e0;
+    letter-spacing: 0.5px;
+}
+
+.calendar-today-btn {
+    background: none;
+    border: 1px solid #444;
+    border-radius: 4px;
+    color: #888;
+    font-size: 12px;
+    padding: 6px 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.calendar-today-btn:hover {
+    background-color: #2a2a2a;
+    color: #e0e0e0;
+    border-color: #666;
+}
+
+/* Calendar Grid Header (Weekdays) */
+.calendar-grid-header {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 1px;
+    background-color: #333;
+    border: 1px solid #333;
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    overflow: hidden;
+}
+
+.calendar-weekday {
+    background-color: #1a1a1a;
+    padding: 12px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Calendar Grid (Cells) */
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    grid-auto-rows: 1fr;
+    gap: 1px;
+    background-color: #333;
+    border: 1px solid #333;
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    overflow: hidden;
+    height: calc(100vh - 200px);
+}
+
+.calendar-cell {
+    background-color: #1a1a1a;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    transition: background-color 0.2s;
+    overflow: hidden;
+}
+
+.calendar-cell:hover {
+    background-color: #222;
+}
+
+.calendar-cell.drag-over {
+    background-color: #252525;
+    border: 2px solid #555;
+}
+
+.calendar-cell.today {
+    background-color: #1a2a2a;
+    border: 2px solid #1abc9c;
+}
+
+.calendar-cell.past {
+    background-color: #151515;
+    opacity: 0.7;
+}
+
+.calendar-cell.other-month {
+    opacity: 0.4;
+}
+
+.calendar-cell-date {
+    font-size: 12px;
+    font-weight: 600;
+    color: #888;
+    margin-bottom: 4px;
+    text-align: right;
+}
+
+.calendar-cell.today .calendar-cell-date {
+    color: #1abc9c;
+}
+
+.calendar-cell-tasks {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    overflow-y: auto;
+}
+
+/* Calendar note cards: minimal display */
+.note-card-calendar {
+    padding: 4px 8px !important;
+    min-height: 20px !important;
+    max-height: 20px !important;
+    overflow: hidden;
+    cursor: grab;
+    border-radius: 4px !important;
+    background-image: none !important;
+}
+
+/* Category colors as background */
+.note-card-calendar[data-category="k"] {
+    background-color: #7FDBDA !important;
+}
+
+.note-card-calendar[data-category="h"] {
+    background-color: #FFD966 !important;
+}
+
+.note-card-calendar[data-category="p"] {
+    background-color: #FF6B6B !important;
+}
+
+.note-card-calendar[data-category="u"] {
+    background-color: #9b59b6 !important;
+}
+
+.note-card-calendar:not([data-category]) {
+    background-color: #fff !important;
+}
+
+.note-card-calendar .note-content {
+    font-size: 10px !important;
+    font-weight: 500;
+    color: #000 !important;
+    line-height: 1.2;
+    margin: 0 !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.calendar-cell-tasks:empty::after {
+    content: '';
+    display: none;
 }
 
 /* Plan View */

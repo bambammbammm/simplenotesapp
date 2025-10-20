@@ -8,8 +8,8 @@
     <title>Simple Notes App</title>
     <link rel="icon" type="image/png" href="icon-192.png">
     <link rel="apple-touch-icon" href="icon-192.png">
-    <link rel="manifest" href="manifest.json?v=101">
-    <link rel="stylesheet" href="style.css?v=101">
+    <link rel="manifest" href="manifest.json?v=109">
+    <link rel="stylesheet" href="style.css?v=109">
 </head>
 <body>
     <div class="app-container">
@@ -149,92 +149,53 @@
             </div>
         </main>
 
-        <!-- Kanban View -->
-        <main class="kanban-view" id="kanbanView" style="display: none;">
-            <div class="kanban-column" data-day="unassigned">
-                <div class="kanban-column-header">
-                    <div class="kanban-header-top">
-                        <h3>Nicht zugewiesen</h3>
-                        <div class="kanban-header-actions">
-                            <span class="kanban-count">0</span>
-                        </div>
+        <!-- Calendar View (formerly Kanban) -->
+        <main class="calendar-view" id="calendarView" style="display: none;">
+            <!-- Backlog Column (Left Side) -->
+            <div class="calendar-backlog" id="calendarBacklog">
+                <div class="calendar-backlog-header">
+                    <h3>Backlog</h3>
+                    <div class="backlog-stats">
+                        <span class="backlog-count" id="backlogCount">0</span>
+                        <span class="backlog-time" id="backlogTime">0m</span>
                     </div>
-                    <div class="kanban-time-total">0m</div>
-                    <button class="kanban-collapse-btn" id="collapseUnassignedBtn" title="Spalte zuklappen">
-                        <span class="collapse-icon">‹</span>
+                </div>
+                <div class="calendar-backlog-body" id="calendarBacklogBody">
+                    <!-- Unassigned tasks will be inserted here -->
+                </div>
+            </div>
+
+            <!-- Calendar Grid (Right Side) -->
+            <div class="calendar-container" id="calendarContainer">
+                <!-- Calendar Navigation -->
+                <div class="calendar-nav" id="calendarNav">
+                    <button class="calendar-nav-btn" id="calendarPrevBtn" title="Vorheriger Monat">
+                        <span class="nav-icon">‹</span>
+                    </button>
+                    <div class="calendar-nav-center">
+                        <h2 class="calendar-month-title" id="calendarMonthTitle">Oktober 2025</h2>
+                        <button class="calendar-today-btn" id="calendarTodayBtn" title="Zu heute springen">Heute</button>
+                    </div>
+                    <button class="calendar-nav-btn" id="calendarNextBtn" title="Nächster Monat">
+                        <span class="nav-icon">›</span>
                     </button>
                 </div>
-                <div class="kanban-column-body" data-day="unassigned"></div>
-            </div>
-            <div class="kanban-column" data-day="monday">
-                <div class="kanban-column-header">
-                    <div class="kanban-header-top">
-                        <h3>Montag</h3>
-                        <span class="kanban-count">0</span>
-                    </div>
-                    <div class="kanban-time-total">0m</div>
+
+                <!-- Calendar Grid Header (Weekdays) -->
+                <div class="calendar-grid-header" id="calendarGridHeader">
+                    <div class="calendar-weekday">Mo</div>
+                    <div class="calendar-weekday">Di</div>
+                    <div class="calendar-weekday">Mi</div>
+                    <div class="calendar-weekday">Do</div>
+                    <div class="calendar-weekday">Fr</div>
+                    <div class="calendar-weekday">Sa</div>
+                    <div class="calendar-weekday">So</div>
                 </div>
-                <div class="kanban-column-body" data-day="monday"></div>
-            </div>
-            <div class="kanban-column" data-day="tuesday">
-                <div class="kanban-column-header">
-                    <div class="kanban-header-top">
-                        <h3>Dienstag</h3>
-                        <span class="kanban-count">0</span>
-                    </div>
-                    <div class="kanban-time-total">0m</div>
+
+                <!-- Calendar Grid (Cells for days) -->
+                <div class="calendar-grid" id="calendarGrid">
+                    <!-- Calendar cells will be dynamically generated here -->
                 </div>
-                <div class="kanban-column-body" data-day="tuesday"></div>
-            </div>
-            <div class="kanban-column" data-day="wednesday">
-                <div class="kanban-column-header">
-                    <div class="kanban-header-top">
-                        <h3>Mittwoch</h3>
-                        <span class="kanban-count">0</span>
-                    </div>
-                    <div class="kanban-time-total">0m</div>
-                </div>
-                <div class="kanban-column-body" data-day="wednesday"></div>
-            </div>
-            <div class="kanban-column" data-day="thursday">
-                <div class="kanban-column-header">
-                    <div class="kanban-header-top">
-                        <h3>Donnerstag</h3>
-                        <span class="kanban-count">0</span>
-                    </div>
-                    <div class="kanban-time-total">0m</div>
-                </div>
-                <div class="kanban-column-body" data-day="thursday"></div>
-            </div>
-            <div class="kanban-column" data-day="friday">
-                <div class="kanban-column-header">
-                    <div class="kanban-header-top">
-                        <h3>Freitag</h3>
-                        <span class="kanban-count">0</span>
-                    </div>
-                    <div class="kanban-time-total">0m</div>
-                </div>
-                <div class="kanban-column-body" data-day="friday"></div>
-            </div>
-            <div class="kanban-column" data-day="saturday">
-                <div class="kanban-column-header">
-                    <div class="kanban-header-top">
-                        <h3>Samstag</h3>
-                        <span class="kanban-count">0</span>
-                    </div>
-                    <div class="kanban-time-total">0m</div>
-                </div>
-                <div class="kanban-column-body" data-day="saturday"></div>
-            </div>
-            <div class="kanban-column" data-day="sunday">
-                <div class="kanban-column-header">
-                    <div class="kanban-header-top">
-                        <h3>Sonntag</h3>
-                        <span class="kanban-count">0</span>
-                    </div>
-                    <div class="kanban-time-total">0m</div>
-                </div>
-                <div class="kanban-column-body" data-day="sunday"></div>
             </div>
         </main>
 
@@ -428,17 +389,8 @@ Tipp: Schreiben Sie (Task-Name 30m --k) um automatisch eine Aufgabe zu erstellen
                         </div>
 
                         <div class="task-input-group">
-                            <label>Tag</label>
-                            <select id="taskCreatorDay" class="task-creator-select">
-                                <option value="">Nicht zugewiesen</option>
-                                <option value="monday">Montag</option>
-                                <option value="tuesday">Dienstag</option>
-                                <option value="wednesday">Mittwoch</option>
-                                <option value="thursday">Donnerstag</option>
-                                <option value="friday">Freitag</option>
-                                <option value="saturday">Samstag</option>
-                                <option value="sunday">Sonntag</option>
-                            </select>
+                            <label>Datum (optional)</label>
+                            <input type="date" id="taskCreatorDate" class="task-creator-input" placeholder="YYYY-MM-DD">
                         </div>
                     </div>
 
@@ -519,9 +471,9 @@ Tipp: Schreiben Sie (Task-Name 30m --k) um automatisch eine Aufgabe zu erstellen
         </div>
     </div>
 
-    <script src="app.js?v=101"></script>
-    <script src="ui-redesign.js?v=101"></script>
-    <script src="task-creator.js?v=101"></script>
+    <script src="app.js?v=109"></script>
+    <script src="ui-redesign.js?v=109"></script>
+    <script src="task-creator.js?v=109"></script>
     <script>
         // Register Service Worker for PWA
         if ('serviceWorker' in navigator) {

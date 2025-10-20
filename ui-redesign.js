@@ -47,15 +47,15 @@
         { key: '!!', desc: 'Priorität mittel', type: 'priority', value: '2' },
         { key: '!!!', desc: 'Priorität hoch', type: 'priority', value: '3' },
 
-        // Days
-        { key: 'Mo', desc: 'Montag', type: 'day', value: 'monday' },
-        { key: 'Di', desc: 'Dienstag', type: 'day', value: 'tuesday' },
-        { key: 'Mi', desc: 'Mittwoch', type: 'day', value: 'wednesday' },
-        { key: 'Do', desc: 'Donnerstag', type: 'day', value: 'thursday' },
-        { key: 'Fr', desc: 'Freitag', type: 'day', value: 'friday' },
-        { key: 'Sa', desc: 'Samstag', type: 'day', value: 'saturday' },
-        { key: 'So', desc: 'Sonntag', type: 'day', value: 'sunday' },
-        { key: 'Keine', desc: 'Nicht zugewiesen', type: 'day', value: 'unassigned' },
+        // Days (diese Woche)
+        { key: 'Mo', desc: 'Montag (diese Woche)', type: 'day', value: 'monday' },
+        { key: 'Di', desc: 'Dienstag (diese Woche)', type: 'day', value: 'tuesday' },
+        { key: 'Mi', desc: 'Mittwoch (diese Woche)', type: 'day', value: 'wednesday' },
+        { key: 'Do', desc: 'Donnerstag (diese Woche)', type: 'day', value: 'thursday' },
+        { key: 'Fr', desc: 'Freitag (diese Woche)', type: 'day', value: 'friday' },
+        { key: 'Sa', desc: 'Samstag (diese Woche)', type: 'day', value: 'saturday' },
+        { key: 'So', desc: 'Sonntag (diese Woche)', type: 'day', value: 'sunday' },
+        { key: 'Keine', desc: 'Keine Deadline', type: 'day', value: 'unassigned' },
 
         // Actions
         { key: 'clear', desc: 'Alle Filter entfernen', type: 'action', value: 'clear' },
@@ -289,13 +289,13 @@
     // Update view name when switching views
     function updateHeaderViewName() {
         const planView = document.getElementById('planView');
-        const kanbanView = document.getElementById('kanbanView');
+        const calendarView = document.getElementById('calendarView');
         const notesCanvas = document.getElementById('notesCanvas');
 
         if (planView && planView.style.display !== 'none') {
             headerViewName.textContent = 'PLAN';
-        } else if (kanbanView && kanbanView.style.display !== 'none') {
-            headerViewName.textContent = 'KANBAN';
+        } else if (calendarView && calendarView.style.display !== 'none') {
+            headerViewName.textContent = 'KALENDER';
         } else {
             // Board view - check if Stack View is active
             if (window.app && window.app.stackViewActive) {

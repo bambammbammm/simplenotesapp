@@ -20,7 +20,7 @@
     const categorySelect = document.getElementById('taskCreatorCategory');
     const classGroup = document.getElementById('taskCreatorClassGroup');
     const classSelect = document.getElementById('taskCreatorClass');
-    const daySelect = document.getElementById('taskCreatorDay');
+    const dateInput = document.getElementById('taskCreatorDate');
     const priorityButtons = document.querySelectorAll('.priority-btn');
 
     // Task list elements
@@ -64,7 +64,7 @@
         timeInput.value = '';
         categorySelect.value = '';
         classGroup.style.display = 'none';
-        daySelect.value = '';
+        dateInput.value = '';
 
         // Reset priority
         currentPriority = '';
@@ -192,7 +192,7 @@
                 task.category = categorySelect.value || null;
                 task.uClass = (categorySelect.value === 'u' ? classSelect.value : null);
                 task.priority = currentPriority || null;
-                task.assignedDay = daySelect.value || null;
+                task.dueDate = dateInput.value || null;
             }
             editingTaskId = null;
 
@@ -208,7 +208,7 @@
                 category: categorySelect.value || null,
                 uClass: (categorySelect.value === 'u' ? classSelect.value : null),
                 priority: currentPriority || null,
-                assignedDay: daySelect.value || null
+                dueDate: dateInput.value || null
             };
             tasks.push(task);
         }
@@ -220,7 +220,7 @@
         timeInput.value = '';
         categorySelect.value = '';
         classGroup.style.display = 'none';
-        daySelect.value = '';
+        dateInput.value = '';
         currentPriority = '';
         priorityButtons.forEach(btn => btn.classList.remove('active'));
         contentInput.focus();
@@ -266,7 +266,7 @@
             classGroup.style.display = 'none';
         }
 
-        daySelect.value = task.assignedDay || '';
+        dateInput.value = task.dueDate || '';
 
         // Set priority
         currentPriority = task.priority || '';
@@ -409,7 +409,7 @@
                         task.category = categorySelect.value || null;
                         task.uClass = (categorySelect.value === 'u' ? classSelect.value : null);
                         task.priority = currentPriority || null;
-                        task.assignedDay = daySelect.value || null;
+                        task.dueDate = dateInput.value || null;
                     }
                     editingTaskId = null;
                 }
@@ -460,7 +460,7 @@
             uClass: task.uClass,
             timeMinutes: task.timeMinutes,
             focused: false,
-            assignedDay: task.assignedDay,
+            dueDate: task.dueDate,
             priority: task.priority
         };
 
@@ -496,7 +496,7 @@
                 uClass: task.uClass,
                 timeMinutes: task.timeMinutes,
                 focused: false,
-                assignedDay: task.assignedDay,
+                dueDate: task.dueDate,
                 priority: task.priority
             };
         });
@@ -547,7 +547,7 @@
         if (!note) return;
 
         // Get values from modal - either from contentInput (single note edit) or tasks[0] (if added to list)
-        let content, timeMinutes, category, uClass, priority, assignedDay;
+        let content, timeMinutes, category, uClass, priority, dueDate;
 
         if (tasks.length > 0) {
             // User added task to list - use first task
@@ -557,7 +557,7 @@
             category = task.category;
             uClass = task.uClass;
             priority = task.priority;
-            assignedDay = task.assignedDay;
+            dueDate = task.dueDate;
         } else {
             // User editing directly in inputs without adding to list
             content = contentInput.value.trim();
@@ -565,7 +565,7 @@
             category = categorySelect.value || null;
             uClass = (categorySelect.value === 'u' ? classSelect.value : null);
             priority = currentPriority || null;
-            assignedDay = daySelect.value || null;
+            dueDate = dateInput.value || null;
         }
 
         // Update note
@@ -574,7 +574,7 @@
         note.category = category;
         note.uClass = uClass;
         note.priority = priority;
-        note.assignedDay = assignedDay;
+        note.dueDate = dueDate;
 
         // Save and render
         window.app.saveNotes();
@@ -619,7 +619,7 @@
                 note.category = task.category;
                 note.uClass = task.uClass;
                 note.priority = task.priority;
-                note.assignedDay = task.assignedDay;
+                note.dueDate = task.dueDate;
                 note.stackId = stackId;
                 newNoteIds.push(note.id);
             } else {
@@ -634,7 +634,7 @@
                     uClass: task.uClass,
                     timeMinutes: task.timeMinutes,
                     focused: false,
-                    assignedDay: task.assignedDay,
+                    dueDate: task.dueDate,
                     priority: task.priority
                 };
                 window.app.notes.push(note);
@@ -1034,7 +1034,7 @@
                 classSelect.value = note.uClass;
             }
 
-            daySelect.value = note.assignedDay || '';
+            dateInput.value = note.dueDate || '';
 
             // Set priority
             currentPriority = note.priority || '';
@@ -1069,7 +1069,7 @@
                     category: note.category,
                     uClass: note.uClass,
                     priority: note.priority,
-                    assignedDay: note.assignedDay
+                    dueDate: note.dueDate
                 };
             }).filter(Boolean);
 
