@@ -189,6 +189,53 @@ seq: Stack Titel
   - Focus: Türkiser Outline für aktive Zelle
 - **Backwards Compatibility**: `updateExistingTables()` fügt neue Buttons zu alten Tabellen hinzu
 
+### 13. Google Calendar Integration (v112)
+- **OAuth 2.0 mit Google Identity Services (GIS)**
+  - Read-only Zugriff auf alle Google Kalender
+  - Neue GIS API (migriert von deprecated `gapi.auth2`)
+  - OAuth Flow: `google.accounts.oauth2.initTokenClient()`
+  - Access Token Management: `gapi.client.setToken()`
+  - Credentials in localStorage gespeichert
+- **Multi-Calendar Support**:
+  - Fetcht Events von **allen** Kalendern (nicht nur primary)
+  - Unterstützt: KSWIL, Familie, Privat, Holidays, etc.
+  - Excludiert automatisch: "Week Numbers" Kalender
+  - Parallel API Calls für bessere Performance
+- **Button in Time Availability Section**:
+  - "📅 Google Calendar verbinden" (blau)
+  - Wird grün: "✓ Google Calendar verbunden"
+  - Click zum Sign-in/Sign-out Toggle
+- **Event Fetching**:
+  - `fetchTodaysEvents()`: Heutige Events für AI Briefing
+  - `fetchWeekEvents()`: Nächste 7 Tage für Wochenüberblick
+  - Events enthalten: summary, time, location, calendarName
+  - Sortiert nach Startzeit
+
+### 14. AI Briefing mit Calendar Events (v112)
+- **Keyboard Shortcut**: Cmd+Shift+B (Ctrl+Shift+B)
+- **Drei Hauptsektionen**:
+  1. **Kalender Events (heute)**: Nur Google Calendar Events
+     - Format: `📅 HH:MM-HH:MM: Event Name [Kalender]`
+     - Excludiert "Week Numbers" Kalender
+     - Mit Location falls vorhanden
+  2. **Zeitplan (Tasks)**: Berechneter Zeitplan aus Time Availability
+     - Emoji-basiert (🔥⚡📚💼🎓🏠)
+     - Mit Kategorie, Priorität, Dauer
+     - Task-Splitting falls nötig
+  3. **Wochenausblick**: Nächste 7 Tage (ab morgen)
+     - Alle Calendar Events mit Tag, Uhrzeit, Kalender
+     - Wichtige Tasks (!! oder !!!)
+     - Als Fließtext formatiert (nicht als Liste)
+- **Prompt Engineering**:
+  - KI bekommt strukturierte Daten (JavaScript macht Berechnungen)
+  - Anweisung: "Kopiere 1:1" für exakte Zeitangaben
+  - Fließtext für Wochenausblick (nicht technisch)
+  - Markdown-to-HTML Konvertierung für schöne Darstellung
+- **Ollama Integration**:
+  - Lokales Model: `gemma3:4b`
+  - Endpoint: `http://127.0.0.1:11434/api/generate`
+  - Fallback mit hilfreichen Fehler-Messages
+
 ## Kritische Implementierungsdetails
 
 ### Parsing-Reihenfolge (addNote)
@@ -256,6 +303,8 @@ stacks = stacks.filter(s => s.noteIds.length > 0);
 - `lastSessionData`: Session-Statistik
 - `completedCounter`: { count, date }
 - `backupSettings`: IndexedDB für Auto-Backup
+- `googleClientId`: Google OAuth Client ID (v112)
+- `googleApiKey`: Google API Key (v112)
 
 ## Button-Layout
 
@@ -346,6 +395,24 @@ stacks = stacks.filter(s => s.noteIds.length > 0);
   - updateExistingTables() entfernt alte per-table Button-Divs
   - Konsistentes Styling mit Speichern/Neue Notiz Buttons
   - Visual Divider trennt normale von Tabellen-Buttons
+- **Google Calendar Integration (v111-v112)**:
+  - **Migration von gapi.auth2 zu GIS**: Deprecated API → Google Identity Services
+    - Problem: `idpiframe_initialization_failed` bei neuen Clients
+    - Lösung: `google.accounts.oauth2.initTokenClient()` statt `gapi.auth2.getAuthInstance()`
+    - Token Management: `gapi.client.setToken({ access_token })` manuell setzen
+  - **Multi-Calendar Fetching**: Promise.all() für parallele API Calls
+    - Alle Kalender fetchen, nicht nur "primary"
+    - Events mit `_calendarName` Property markieren
+  - **Week Numbers Kalender**: Automatisch excludieren (kein User-Content)
+  - **Popup Blocking**: OAuth muss direkt aus User-Click kommen, nicht setTimeout
+    - Erst Init → User klickt nochmal → dann OAuth Popup
+  - **Wochenüberblick Formatting**:
+    - Problem: KI fasst zu kurz zusammen oder kopiert Tasks als Events
+    - Lösung: Explizite Anweisungen "Kopiere NUR Kalender Events", "NICHT die Tasks"
+    - Fließtext statt technische Liste für bessere Lesbarkeit
+  - **Credentials Storage**: localStorage für Client ID und API Key
+    - Prompt beim ersten Mal, dann persistent
+    - Keine Secrets im Code (user provides own)
 
 ## Phase 3: Kanban → Kalender Transformation (WIP - v102+)
 
