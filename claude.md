@@ -346,3 +346,249 @@ stacks = stacks.filter(s => s.noteIds.length > 0);
   - updateExistingTables() entfernt alte per-table Button-Divs
   - Konsistentes Styling mit Speichern/Neue Notiz Buttons
   - Visual Divider trennt normale von Tabellen-Buttons
+
+## Phase 3: Kanban → Kalender Transformation (WIP - v102+)
+
+### Konzept
+
+**Problem mit altem Kanban:**
+- Statische Wochentage (Mo-So) ohne konkrete Daten
+- Keine echten Deadlines/Termine
+- Umständliches Handling
+
+**Neue Lösung: Monatskalender-Ansicht**
+- Zeigt ganzen Monat als Grid
+- Backlog-Spalte links für unzugewiesene Tasks
+- Drag & Drop von Backlog zu Kalendertag weist echtes Datum zu
+- Echte Termine statt abstrakte Wochentage
+
+### Datenmodell-Änderung
+
+**ALT:**
+```javascript
+{
+  assignedDay: 'monday'  // abstrakt, relativ
+}
+```
+
+**NEU:**
+```javascript
+{
+  dueDate: '2025-10-21'  // konkret, ISO-Format (YYYY-MM-DD)
+}
+```
+
+**Warum ISO-Format (YYYY-MM-DD):**
+- Menschenlesbar und debuggbar
+- Standard in JavaScript: `new Date('2025-10-21')`
+- Einfache String-Vergleiche und Sortierung
+- Kein Timezone-Chaos
+
+### Layout-Konzept
+
+```
+┌─────────────────┬──────────────────────────────────────────┐
+│   BACKLOG       │  < Oktober 2025 >      [Heute]          │
+│                 ├──────────────────────────────────────────┤
+│  [Task 1]       │  Mo  Di  Mi  Do  Fr  Sa  So             │
+│  [Task 2]       │ ┌──┬──┬──┬──┬──┬──┬──┐                 │
+│  [Task 3]       │ │  │  │1 │2 │3 │4 │5 │                 │
+│                 │ ├──┼──┼──┼──┼──┼──┼──┤                 │
+│  Drag Tasks →   │ │6 │7 │8 │9 │10│11│12│                 │
+│  zum Datum      │ ├──┼──┼──┼──┼──┼──┼──┤                 │
+│                 │ │13│14│15│16│17│18│19│                 │
+│                 │ ├──┼──┼──┼──┼──┼──┼──┤                 │
+│                 │ │20│21│22│23│24│25│26│  ← Heute       │
+│                 │ ├──┼──┼──┼──┼──┼──┼──┤                 │
+│                 │ │27│28│29│30│31│  │  │                 │
+│                 │ └──┴──┴──┴──┴──┴──┴──┘                 │
+└─────────────────┴──────────────────────────────────────────┘
+```
+
+### Features
+
+**1. Kalender-Grid**
+- Zeigt aktuellen Monat (default: heute)
+- 7 Spalten (Mo-So), ~5-6 Zeilen
+- Jede Zelle = 1 Tag mit Tasks
+
+**2. Backlog-Spalte**
+- Alle Tasks ohne `dueDate`
+- Fixed width links (ca. 300px)
+- Scrollable bei vielen Tasks
+- Gleiche Card-Darstellung wie Board View
+
+**3. Monatsnavigation**
+- `< Oktober 2025 >` Header mit Vor/Zurück-Buttons
+- "Heute" Button springt zu aktuellem Monat
+- Aktueller Monat wird in State gespeichert
+
+**4. Visuelle States**
+- **Heute**: Türkiser Border/Highlight
+- **Vergangene Tage**: Leicht grau/ausgegraut (Tasks bleiben sichtbar)
+- **Wochenende**: Optional andere Hintergrundfarbe
+- **Mit Tasks**: Badge mit Count
+
+**5. Tasks in Zellen**
+- Kompakte Card (nur Titel + Zeit)
+- Hover: Volle Info (Tooltip oder Expand)
+- Click: Edit Modal
+- Mehrere Tasks: Scrollbar oder Stacked View
+- Drag & Drop Support
+
+**6. Drag & Drop**
+- Backlog → Kalendertag: Setzt `dueDate`
+- Tag → Tag: Ändert `dueDate`
+- Tag → Backlog: Entfernt `dueDate` (setzt auf `null`)
+- Ganzer Stack wird zusammen verschoben
+
+**7. Filter-Anpassung (Board View)**
+- Tag-Filter (Mo-So) beziehen sich auf **aktuelle Woche**
+- Montag-Filter = nur Montag dieser Woche
+- Vergangene Tage vorerst nicht ausgeblendet
+- Später: Warnung für überfällige Tasks
+
+### Implementierungs-Plan
+
+**Phase 1: Basis-Struktur (v102)**
+- [ ] HTML: Backlog-Spalte + Kalender-Grid mit statischem Monat
+- [ ] CSS: Grid-Layout (7 Spalten), Backlog-Spalte fixed width
+- [ ] JavaScript: Monatsdaten generieren (Tage-Array)
+- [ ] JavaScript: `renderCalendar()` Funktion
+- [ ] Statischer Test-Monat (z.B. Oktober 2025)
+
+**Phase 2: Navigation (v103)**
+- [ ] State: `currentMonth` und `currentYear` Variablen
+- [ ] Monatsnavigation: Vor/Zurück-Buttons
+- [ ] "Heute" Button zum Zurückspringen
+- [ ] Month/Year Display im Header
+- [ ] Monat speichern in localStorage (optional)
+
+**Phase 3: Drag & Drop (v104)**
+- [ ] Drag-Handler für Cards (bereits vorhanden, anpassen)
+- [ ] Drop-Zones für Kalenderzellen
+- [ ] Drop-Handler: Setzt `dueDate` auf ISO-Datum
+- [ ] Drag zurück zu Backlog: Entfernt `dueDate`
+- [ ] Visual Feedback beim Drag (Highlight Drop-Zone)
+
+**Phase 4: Migration & Polish (v105)**
+- [ ] Migration: `assignedDay` → `dueDate` beim App-Start
+- [ ] Converter-Funktion: `getNextDayOfWeek('monday')` → ISO
+- [ ] Visuelle States: Heute-Highlight, Vergangene Tage
+- [ ] Filter anpassen: Tag-Filter auf aktuelle Woche
+- [ ] Empty States (leere Zellen, leerer Backlog)
+- [ ] Performance: Nur sichtbare Zellen rendern (optional)
+
+### Migration-Strategie
+
+```javascript
+// Beim App-Load: Migriere alte assignedDay zu dueDate
+function migrateAssignedDayToDueDate() {
+  let migrated = 0;
+
+  this.notes.forEach(note => {
+    if (note.assignedDay && !note.dueDate) {
+      // Konvertiere 'monday' → nächsten Montag ab heute
+      note.dueDate = getNextDayOfWeek(note.assignedDay);
+      delete note.assignedDay;
+      migrated++;
+    }
+  });
+
+  if (migrated > 0) {
+    console.log(`Migrated ${migrated} notes from assignedDay to dueDate`);
+    this.saveNotes();
+  }
+}
+
+function getNextDayOfWeek(dayName) {
+  const days = {
+    monday: 1, tuesday: 2, wednesday: 3, thursday: 4,
+    friday: 5, saturday: 6, sunday: 0
+  };
+
+  const today = new Date();
+  const targetDay = days[dayName];
+  const currentDay = today.getDay();
+
+  let daysUntilTarget = targetDay - currentDay;
+  if (daysUntilTarget <= 0) daysUntilTarget += 7; // Nächste Woche
+
+  const targetDate = new Date(today);
+  targetDate.setDate(today.getDate() + daysUntilTarget);
+
+  return targetDate.toISOString().split('T')[0]; // 'YYYY-MM-DD'
+}
+```
+
+### Technische Details
+
+**Kalender-Generierung:**
+```javascript
+function generateCalendarMonth(year, month) {
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+
+  const firstDayOfWeek = firstDay.getDay(); // 0 = Sunday
+  const daysInMonth = lastDay.getDate();
+
+  // Offset für Montag-Start (Mo = 0)
+  const offset = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1;
+
+  const weeks = [];
+  let week = new Array(offset).fill(null); // Empty cells vor Monatsbeginn
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    week.push({
+      date: `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
+      day: day,
+      isToday: isToday(year, month, day),
+      isPast: isPast(year, month, day)
+    });
+
+    if (week.length === 7) {
+      weeks.push(week);
+      week = [];
+    }
+  }
+
+  // Letzte Woche mit Empty Cells auffüllen
+  if (week.length > 0) {
+    while (week.length < 7) week.push(null);
+    weeks.push(week);
+  }
+
+  return weeks;
+}
+```
+
+**Filter für aktuelle Woche:**
+```javascript
+function getCurrentWeekDates() {
+  const today = new Date();
+  const currentDay = today.getDay();
+  const monday = new Date(today);
+
+  // Montag dieser Woche
+  const daysFromMonday = currentDay === 0 ? 6 : currentDay - 1;
+  monday.setDate(today.getDate() - daysFromMonday);
+
+  const weekDates = {};
+  ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+    .forEach((day, index) => {
+      const date = new Date(monday);
+      date.setDate(monday.getDate() + index);
+      weekDates[day] = date.toISOString().split('T')[0];
+    });
+
+  return weekDates;
+}
+```
+
+### Offene Fragen / Später
+
+- [ ] Was passiert mit überfälligen Tasks? (Warnung, Auto-Move, nichts)
+- [ ] Multi-Monat-View (Quartal, Jahr)?
+- [ ] Wiederholende Tasks (Recurring)?
+- [ ] Kalender-Export (iCal)?
+- [ ] Sprint/Milestone-Marker im Kalender?
