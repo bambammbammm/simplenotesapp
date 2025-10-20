@@ -328,3 +328,21 @@ stacks = stacks.filter(s => s.noteIds.length > 0);
   - Event Listener auf Cells: Jede neue Zelle braucht Focus-Listener (addRow/addColumn)
   - updateExistingTables(): Backwards compatibility beim Load für alte Tabellen
   - Separate Hover-States: Header (`#f0f0f0`) vs Body (`rgba(...)`) für bessere UX
+- **Completed State Visualization (v99-v100)**:
+  - Task/Stack Icons im Plan Mode zeigen completion status
+  - `data-note-id` und `data-stack-id` Attribute für Icon-Note-Verknüpfung
+  - `.task-icon.completed` CSS-Klasse für durchgestrichenen, grauen Look
+  - `updatePlanTaskIcons()` Funktion checkt alle Icons gegen notes/stacks Array
+  - Stack completed wenn alle Notes gelöscht/completed sind
+  - Updates bei: toggleComplete(), loadPlanText(), undo()
+  - Icon-Tracking funktioniert für beide Erstellungsmethoden (inline syntax + Cmd+K)
+- **Global Table Action Buttons (v101)**:
+  - Alle Tabellen-Buttons jetzt global in Plan Actions (statt per-table)
+  - 7 Buttons: + Row, + Column, ↑ Zeile, Zeile ↓, ← Spalte, Spalte →, × Delete
+  - `currentFocusedTable` Variable trackt fokussierte Tabelle
+  - `setCurrentFocusedTable()` wird bei Cell-Focus aufgerufen
+  - `updateTableButtonsState()` enabled/disabled Buttons basierend auf Fokus
+  - Buttons disabled bis Tabellenzelle fokussiert ist
+  - updateExistingTables() entfernt alte per-table Button-Divs
+  - Konsistentes Styling mit Speichern/Neue Notiz Buttons
+  - Visual Divider trennt normale von Tabellen-Buttons
